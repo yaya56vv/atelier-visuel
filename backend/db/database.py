@@ -20,6 +20,7 @@ async def init_db() -> None:
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     _db = await aiosqlite.connect(str(DB_PATH))
     _db.row_factory = aiosqlite.Row
+    await _db.execute("PRAGMA foreign_keys = ON")
 
     schema = SCHEMA_PATH.read_text(encoding="utf-8")
     await _db.executescript(schema)

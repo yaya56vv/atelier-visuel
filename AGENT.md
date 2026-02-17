@@ -155,10 +155,14 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 ### 4.1 Ce qui fonctionne actuellement
 
 - Squelette frontend React + Vite + TypeScript : compile et s'exécute (page vide)
-- Squelette backend FastAPI : démarre, routes vides enregistrées, base SQLite initialisée
+- Squelette backend FastAPI : démarre, routes enregistrées, base SQLite initialisée
 - Schéma SQLite complet : tables espaces, blocs, contenus_bloc, liaisons, config_ia avec index
 - Arborescence complète conforme à CENTRAL.md
 - Proxy Vite configuré (`/api` → backend:8000, `/ws` → WebSocket)
+- **CRUD Espaces** : POST/GET/PUT/DELETE avec cascade (supprime blocs, contenus, liaisons)
+- **CRUD Blocs** : POST/GET/PUT/DELETE avec validation forme/couleur, contenus internes (ajout/suppression)
+- **CRUD Liaisons** : POST/GET/DELETE avec vérification FK (espace, blocs), auto-liaison interdite
+- Foreign keys SQLite activées (PRAGMA foreign_keys = ON)
 
 ### 4.2 Ce qui est fragile (à manipuler avec précaution)
 
@@ -338,11 +342,11 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 
 ## 8. AVANCEMENT — Où on en est
 
-**Étape actuelle :** 0 / 12
-**Dernière étape validée :** 0 — Squelette projet initialisé
-**Prochaine étape :** 1 — Backend CRUD espaces, blocs, liaisons
-**Critère de fin :** Les routes POST/GET/PUT/DELETE pour espaces, blocs et liaisons fonctionnent et persistent en SQLite
-**Dernier verdict contrôle :** N/A
+**Étape actuelle :** 1 / 12
+**Dernière étape validée :** 1 — Backend CRUD espaces, blocs, liaisons
+**Prochaine étape :** 2 — Backend configuration IA + indexation
+**Critère de fin :** La config IA se lit et se modifie via API. Le routeur IA dispatche vers local ou API. L'indexation se déclenche à la création/modification d'un bloc.
+**Dernier verdict contrôle :** OK (17/02/2026)
 **Cycles KO consécutifs :** 0
 
 ---
