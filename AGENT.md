@@ -173,6 +173,10 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 - **Canvas2D interactions** : drag & drop blocs, pan (clic vide/milieu/droit), zoom molette progressif vers souris, sélection clic, curseur contextuel, hit-testing, création liaison par connecteur, redimensionnement 8 directions
 - **Canvas2D légendes** : légendes contextuelles couleur+forme au geste, fade automatique 2s+500ms, significations sémantiques conformes CENTRAL.md
 - **Bus d'événements** : `canvasBus` typé (select, open, move, resize, link), découplage Canvas/React total
+- **TopBar** : sélecteur d'espace, création d'espace, titre central, glassmorphism
+- **SidePanel** : ligne verticale discrète, déploiement cliquer-tirer, snap, champ recherche
+- **BottomBar** : sauver, recentrer, zoom +/-, toggle IA, stop
+- **ConsoleIA** : panneau droit translucide (backdrop-blur), historique chat, zone saisie, non-modale
 
 ### 4.2 Ce qui est fragile (à manipuler avec précaution)
 
@@ -352,10 +356,10 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 
 ## 8. AVANCEMENT — Où on en est
 
-**Étape actuelle :** 6 / 12
-**Dernière étape validée :** 6 — Canvas2D : légendes contextuelles et bus d'événements
-**Prochaine étape :** 7 — Interface React : barres et panneaux
-**Critère de fin :** Les 4 zones UI visibles et positionnées. SidePanel se déploie. ConsoleIA translucide avec graphe visible. TopBar permet création/sélection d'espace.
+**Étape actuelle :** 7 / 12
+**Dernière étape validée :** 7 — Interface React : barres et panneaux
+**Prochaine étape :** 8 — Intégration Frontend ↔ Backend (API REST)
+**Critère de fin :** Espaces, blocs, liaisons se chargent/créent/modifient/suppriment avec persistance réelle. Rechargement = données restaurées.
 **Dernier verdict contrôle :** OK (17/02/2026)
 **Cycles KO consécutifs :** 0
 
