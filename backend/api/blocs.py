@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from db.database import get_db
+from services.indexation import indexer_bloc
 
 router = APIRouter()
 
@@ -141,7 +142,12 @@ async def add_contenu(bloc_id: str, data: ContenuCreate):
     )
     await db.commit()
     row = await db.execute_fetchall("SELECT * FROM contenus_bloc WHERE id = ?", (contenu_id,))
-    return dict(row[0])
+    result = dict(row[0])
+
+    # Déclencher l'indexation IA (non bloquant si IA non configurée)
+    await indexer_bloc(bloc_id)
+
+    return result
 
 
 @router.delete("/{bloc_id}/contenus/{contenu_id}", status_code=204)

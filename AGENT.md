@@ -163,6 +163,9 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 - **CRUD Blocs** : POST/GET/PUT/DELETE avec validation forme/couleur, contenus internes (ajout/suppression)
 - **CRUD Liaisons** : POST/GET/DELETE avec vérification FK (espace, blocs), auto-liaison interdite
 - Foreign keys SQLite activées (PRAGMA foreign_keys = ON)
+- **Config IA** : GET/PUT par rôle (graphe, assistant), mode local/API, UPSERT
+- **Routeur IA** : dispatch vers Ollama (local) ou API OpenAI-compatible, timeout 30s, erreurs gracieuses
+- **Indexation** : génération titre_ia/resume_ia/entités/mots-clés via IA Graphe, déclenchée à l'ajout de contenu
 
 ### 4.2 Ce qui est fragile (à manipuler avec précaution)
 
@@ -342,10 +345,10 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 
 ## 8. AVANCEMENT — Où on en est
 
-**Étape actuelle :** 1 / 12
-**Dernière étape validée :** 1 — Backend CRUD espaces, blocs, liaisons
-**Prochaine étape :** 2 — Backend configuration IA + indexation
-**Critère de fin :** La config IA se lit et se modifie via API. Le routeur IA dispatche vers local ou API. L'indexation se déclenche à la création/modification d'un bloc.
+**Étape actuelle :** 2 / 12
+**Dernière étape validée :** 2 — Backend configuration IA + indexation
+**Prochaine étape :** 3 — Canvas2D : moteur de rendu et formes
+**Critère de fin :** Les 5 formes s'affichent correctement avec les 6 couleurs, effets visuels fidèles au rendu cible, zéro constante codée en dur
 **Dernier verdict contrôle :** OK (17/02/2026)
 **Cycles KO consécutifs :** 0
 
