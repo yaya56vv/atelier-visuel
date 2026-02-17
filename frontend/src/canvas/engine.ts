@@ -2,10 +2,12 @@
 // Responsable du cycle de rendu, gestion du contexte 2D, boucle d'animation
 
 import { THEME } from './theme'
-import { drawBloc, type BlocVisuel } from './shapes'
+import { drawBloc, type BlocVisuel, type LiaisonVisuelle } from './shapes'
+import { drawAllLiaisons } from './links'
 
 export interface EngineState {
   blocs: BlocVisuel[]
+  liaisons: LiaisonVisuelle[]
   offsetX: number
   offsetY: number
   zoom: number
@@ -17,6 +19,7 @@ export class CanvasEngine {
   private animationId: number | null = null
   private state: EngineState = {
     blocs: [],
+    liaisons: [],
     offsetX: 0,
     offsetY: 0,
     zoom: 1,
@@ -32,6 +35,11 @@ export class CanvasEngine {
   /** Met à jour la liste des blocs à afficher. */
   setBlocs(blocs: BlocVisuel[]) {
     this.state.blocs = blocs
+  }
+
+  /** Met à jour la liste des liaisons à afficher. */
+  setLiaisons(liaisons: LiaisonVisuelle[]) {
+    this.state.liaisons = liaisons
   }
 
   /** Met à jour le pan (décalage). */
@@ -71,7 +79,7 @@ export class CanvasEngine {
   /** Dessine un frame complet. */
   private render = () => {
     const { ctx, canvas } = this
-    const { blocs, offsetX, offsetY, zoom } = this.state
+    const { blocs, liaisons, offsetX, offsetY, zoom } = this.state
     const dpr = window.devicePixelRatio || 1
     const w = canvas.width / dpr
     const h = canvas.height / dpr
@@ -86,10 +94,21 @@ export class CanvasEngine {
     ctx.translate(offsetX, offsetY)
     ctx.scale(zoom, zoom)
 
-    // Dessin des blocs (non sélectionnés d'abord, sélectionnés au-dessus)
+    // Collecter les IDs des blocs sélectionnés
+    const selectedIds = new Set<string>()
+    for (const bloc of blocs) {
+      if (bloc.selected) selectedIds.add(bloc.id)
+    }
+
+    // Dessin des blocs non sélectionnés
     for (const bloc of blocs) {
       if (!bloc.selected) drawBloc(ctx, bloc)
     }
+
+    // Dessin des liaisons (entre blocs non sélectionnés et sélectionnés)
+    drawAllLiaisons(ctx, liaisons, blocs, selectedIds)
+
+    // Dessin des blocs sélectionnés au-dessus
     for (const bloc of blocs) {
       if (bloc.selected) drawBloc(ctx, bloc)
     }

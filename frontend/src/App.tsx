@@ -1,10 +1,10 @@
 import { useEffect, useRef } from 'react'
 import { CanvasEngine } from './canvas/engine'
-import type { BlocVisuel } from './canvas/shapes'
+import type { BlocVisuel, LiaisonVisuelle } from './canvas/shapes'
 
 // Blocs de démonstration pour vérifier le rendu des 5 formes x 6 couleurs
 const DEMO_BLOCS: BlocVisuel[] = [
-  // Ligne 1 — les 5 formes en vert
+  // Ligne 1 — les 5 formes
   { id: '1', x: 50,  y: 40,  w: 180, h: 110, forme: 'cloud',        couleur: 'green',  titre: 'Nuage vert',     selected: false },
   { id: '2', x: 260, y: 40,  w: 180, h: 110, forme: 'rounded-rect', couleur: 'orange', titre: 'Rect arrondi',   selected: false },
   { id: '3', x: 470, y: 40,  w: 140, h: 140, forme: 'square',       couleur: 'yellow', titre: 'Carré jaune',    selected: true },
@@ -19,6 +19,26 @@ const DEMO_BLOCS: BlocVisuel[] = [
   { id: '10', x: 900, y: 220, w: 100, h: 100, forme: 'circle',       couleur: 'yellow', titre: 'Cercle jaune',   selected: false },
 ]
 
+// Liaisons de démonstration — les 4 types
+const DEMO_LIAISONS: LiaisonVisuelle[] = [
+  // Simple : Nuage vert → Rect arrondi (jaune — fait → insight)
+  { id: 'l1', sourceId: '1', cibleId: '2', type: 'simple',  couleur: 'yellow' },
+  // Logique : Carré jaune → Ovale bleu (bleu — logique → cadre)
+  { id: 'l2', sourceId: '3', cibleId: '4', type: 'logique', couleur: 'blue' },
+  // Tension : Rect arrondi → Carré jaune (orange — problème → solution)
+  { id: 'l3', sourceId: '2', cibleId: '3', type: 'tension', couleur: 'orange' },
+  // Ancrée : Cercle violet → Ovale bleu (violet — toujours visible)
+  { id: 'l4', sourceId: '5', cibleId: '4', type: 'ancree',  couleur: 'violet' },
+
+  // Liaisons ligne 2 (visibles car bloc 9 est sélectionné)
+  // Simple : Carré vert → Ovale orange
+  { id: 'l5', sourceId: '8', cibleId: '9', type: 'simple',  couleur: 'green' },
+  // Logique : Ovale orange → Cercle jaune
+  { id: 'l6', sourceId: '9', cibleId: '10', type: 'logique', couleur: 'orange' },
+  // Ancrée : Nuage mauve → Rect bleu (toujours visible)
+  { id: 'l7', sourceId: '6', cibleId: '7', type: 'ancree',  couleur: 'mauve' },
+]
+
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const engineRef = useRef<CanvasEngine | null>(null)
@@ -30,6 +50,7 @@ function App() {
     const engine = new CanvasEngine(canvas)
     engineRef.current = engine
     engine.setBlocs(DEMO_BLOCS)
+    engine.setLiaisons(DEMO_LIAISONS)
     engine.start()
 
     const handleResize = () => engine.resize()

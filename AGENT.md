@@ -169,6 +169,7 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 - **Canvas2D moteur** : boucle de rendu 60 FPS, pan/zoom, devicePixelRatio, coordonnées monde/écran
 - **Canvas2D formes** : 5 formes (cloud, rounded-rect, square, oval, circle) avec glow, gradient 3D, reflet glossy, bordure, connecteurs
 - **Canvas2D thème** : tous les paramètres visuels externalisés dans theme.ts
+- **Canvas2D liaisons** : 4 types (simple, logique, tension, ancrée), Bézier cubiques avec tangence réelle, glow lumineux, couleurs sémantiques, liaisons ancrées toujours visibles
 
 ### 4.2 Ce qui est fragile (à manipuler avec précaution)
 
@@ -348,10 +349,10 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 
 ## 8. AVANCEMENT — Où on en est
 
-**Étape actuelle :** 3 / 12
-**Dernière étape validée :** 3 — Canvas2D : moteur de rendu et formes
-**Prochaine étape :** 4 — Canvas2D : liaisons Bézier cubiques
-**Critère de fin :** Les liaisons se dessinent avec tangence réelle, zéro intersection bloc-liaison, effets lumineux visibles, liaisons ancrées toujours affichées
+**Étape actuelle :** 4 / 12
+**Dernière étape validée :** 4 — Canvas2D : liaisons Bézier cubiques
+**Prochaine étape :** 5 — Canvas2D : interactions utilisateur
+**Critère de fin :** Manipulation fluide des blocs (60 FPS), zoom progressif continu, sélection/survol avec feedback visuel, création de liaison fonctionnelle, redimensionnement révélant le contenu
 **Dernier verdict contrôle :** OK (17/02/2026)
 **Cycles KO consécutifs :** 0
 

@@ -61,6 +61,37 @@ export const THEME = {
   glossyOpacity: 0.12,
   glossyHeight: 0.45, // proportion du bloc occupée par le reflet
 
+  // Liaisons
+  liaison: {
+    width: 2,
+    widthSelected: 3,
+    glowBlur: 12,
+    glowBlurSelected: 20,
+    glowOpacity: 0.5,
+    // Distance des points de contrôle Bézier (proportion de la distance entre blocs)
+    controlPointRatio: 0.4,
+    // Styles visuels par type de liaison
+    types: {
+      simple: {
+        dash: [] as number[],        // trait continu
+        opacity: 0.6,
+      },
+      logique: {
+        dash: [8, 4],               // tirets
+        opacity: 0.7,
+      },
+      tension: {
+        dash: [3, 3],               // pointillés courts
+        opacity: 0.8,
+      },
+      ancree: {
+        dash: [] as number[],        // trait continu, plus épais
+        opacity: 0.9,
+        widthBonus: 1,               // épaisseur additionnelle
+      },
+    } as Record<string, { dash: number[]; opacity: number; widthBonus?: number }>,
+  },
+
   // Connecteurs
   connector: {
     radius: 5,

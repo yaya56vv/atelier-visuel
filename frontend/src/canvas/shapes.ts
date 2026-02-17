@@ -6,6 +6,15 @@ import { THEME, type ThemeColors } from './theme'
 
 export type Forme = 'cloud' | 'rounded-rect' | 'square' | 'oval' | 'circle'
 export type Couleur = 'green' | 'orange' | 'yellow' | 'blue' | 'violet' | 'mauve'
+export type TypeLiaison = 'simple' | 'logique' | 'tension' | 'ancree'
+
+export interface LiaisonVisuelle {
+  id: string
+  sourceId: string
+  cibleId: string
+  type: TypeLiaison
+  couleur: Couleur
+}
 
 export interface BlocVisuel {
   id: string
