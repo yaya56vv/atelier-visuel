@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(cmd.exe /c \"where node\")",
+      "Bash(cmd.exe /c \"where npm\")",
+      "Bash(export PATH=\"$PATH:/c/Program Files/nodejs:/c/Users/YAEL/AppData/Roaming/npm\")",
+      "Bash(node --version:*)",
+      "Bash(npm:*)",
+      "Bash(cmd.exe /c \"node --version\")",
+      "Bash(cmd.exe /c \"npm --version\")",
+      "Bash(pip install:*)",
+      "Bash(python -c:*)",
+      "Bash(git init:*)"
+    ]
+  }
+}
