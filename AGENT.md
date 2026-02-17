@@ -284,6 +284,14 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 - **Sortie** : Métadonnées générées (titre_ia, resume_ia, entites, mots_cles)
 - **Effets de bord** : Appel réseau vers Ollama/LM Studio/API externe
 
+**Contrat de la Configuration IA :**
+
+- **Entrée (frontend)** : Utilisateur saisit mode (local/api), URL, modèle, clé API pour chaque rôle
+- **Stockage** : Table `config_ia` SQLite via `PUT /api/config-ia/{role}` (UPSERT)
+- **Lecture** : `GET /api/config-ia/{role}` — retourne la config ou des champs null si non configuré
+- **Test connexion** : `POST /api/config-ia/{role}/test` — vérifie Ollama `/api/tags` (local) ou `/models` (API), retourne `{ok, detail}`
+- **Effets de bord** : Appel réseau httpx vers le serveur IA configuré (timeout 10s)
+
 ### 5.3 Fichiers clés
 
 **Fichiers importants :**
@@ -295,6 +303,9 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 - `frontend/src/main.tsx` : Point d'entrée frontend
 - `frontend/src/canvas/events.ts` : Bus d'événements Canvas ↔ React (pivot architectural)
 - `frontend/vite.config.ts` : Configuration proxy API + WebSocket
+- `backend/api/config_ia.py` : Routes config IA — GET/PUT par rôle + POST test connexion (Ollama tags / API models)
+- `frontend/src/components/ConfigIA.tsx` : Écran config IA — 2 RoleSection (graphe/assistant), mode/URL/modèle/clé API, save + test
+- `frontend/src/api.ts` : Client API REST — toutes les routes (espaces, blocs, liaisons, contenus, config IA, IA assistant)
 
 **Fichiers suspects :** Aucun pour l'instant.
 
@@ -303,6 +314,7 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 - `init_db()` (`backend/db/database.py`) : Initialise la connexion SQLite et exécute le schéma. Si elle échoue, rien ne fonctionne.
 - `close_db()` (`backend/db/database.py`) : Ferme proprement la connexion. Sans elle, risque de corruption.
 - `lifespan()` (`backend/main.py`) : Cycle de vie FastAPI — garantit init_db au démarrage et close_db à l'arrêt.
+- `test_connection()` (`backend/api/config_ia.py`) : Teste la connexion IA par rôle — vérifie Ollama `/api/tags` (local) ou `/models` (API externe), timeout 10s, retourne `{ok, detail}`.
 
 ---
 

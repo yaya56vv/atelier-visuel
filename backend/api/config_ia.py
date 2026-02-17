@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Literal
 
 import httpx
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel
 
 from db.database import get_db

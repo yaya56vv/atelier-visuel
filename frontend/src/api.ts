@@ -159,8 +159,6 @@ export async function deleteContenu(blocId: string, contenuId: string): Promise<
   return request(`/blocs/${blocId}/contenus/${contenuId}`, { method: 'DELETE' })
 }
 
-// ─── IA Assistant ────────────────────────────────────────
-
 // ─── Configuration IA ────────────────────────────────────
 
 export interface ConfigIAAPI {
