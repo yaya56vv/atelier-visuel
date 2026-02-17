@@ -182,6 +182,7 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 - **Store blocs** : `useBlocsStore` — chargement par espace, CRUD synchronisé, debounce position/taille
 - **Intégration Canvas ↔ Backend** : bus d'événements → API calls, double-clic → création, persistance réelle
 - **BlocEditor** : double-clic ouvre éditeur, ajout texte/note/url/citation, suppression, dépôt direct (drag&drop fichiers, paste), contenus persistés via API
+- **Vue Liste** : SidePanel affiche blocs triables (titre/couleur/forme), recherche, sélection → centrage+zoom dans le graphe, synchronisation bidirectionnelle
 
 ### 4.2 Ce qui est fragile (à manipuler avec précaution)
 
@@ -361,10 +362,10 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 
 ## 8. AVANCEMENT — Où on en est
 
-**Étape actuelle :** 9 / 12
-**Dernière étape validée :** 9 — Éditeur de bloc + dépôt direct
-**Prochaine étape :** 10 — Vue Liste synchronisée
-**Critère de fin :** La liste affiche tous les blocs avec titre_ia, extrait, métadonnées. Sélection dans la liste → centrage + zoom dans le graphe. Modification dans le graphe → mise à jour instantanée de la liste.
+**Étape actuelle :** 10 / 12
+**Dernière étape validée :** 10 — Vue Liste synchronisée
+**Prochaine étape :** 11 — Console IA + Assistant
+**Critère de fin :** L'utilisateur peut dialoguer avec l'IA via la console. L'IA peut lire le graphe et formuler des suggestions. Le score de confiance est affiché.
 **Dernier verdict contrôle :** OK (17/02/2026)
 **Cycles KO consécutifs :** 0
 

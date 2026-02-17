@@ -15,6 +15,7 @@ function App() {
   const [showConsole, setShowConsole] = useState(false)
   const [backendOk, setBackendOk] = useState(false)
   const [editBlocId, setEditBlocId] = useState<string | null>(null)
+  const [selectedBlocId, setSelectedBlocId] = useState<string | null>(null)
 
   const espaceStore = useEspaceStore()
   const blocsStore = useBlocsStore(espaceStore.espaceActifId)
@@ -58,6 +59,9 @@ function App() {
     if (!backendOk) return
 
     const unsubs = [
+      canvasBus.on('bloc:select', ({ blocId }) => {
+        setSelectedBlocId(blocId)
+      }),
       canvasBus.on('bloc:move', ({ blocId, x, y }) => {
         blocsStore.moveBloc(blocId, x, y)
       }),
@@ -95,6 +99,21 @@ function App() {
     canvas.addEventListener('dblclick', handler)
     return () => canvas.removeEventListener('dblclick', handler)
   }, [backendOk, espaceStore.espaceActifId, blocsStore.createBloc])
+
+  // Sélection depuis le SidePanel → centrage + zoom + sélection visuelle
+  const handleSelectFromList = (blocId: string) => {
+    const engine = engineRef.current
+    if (!engine) return
+    const bloc = engine.getState().blocs.find(b => b.id === blocId)
+    if (!bloc) return
+
+    // Sélectionner visuellement
+    for (const b of engine.getState().blocs) b.selected = b.id === blocId
+    setSelectedBlocId(blocId)
+
+    // Centrer la vue sur le bloc
+    engine.centerOnBloc(bloc)
+  }
 
   const handleRecenter = () => {
     const engine = engineRef.current
@@ -135,7 +154,11 @@ function App() {
         onSelectEspace={espaceStore.selectEspace}
         onCreateEspace={(nom) => espaceStore.createEspace(nom)}
       />
-      <SidePanel />
+      <SidePanel
+        blocs={blocsStore.blocs}
+        selectedBlocId={selectedBlocId}
+        onSelectBloc={handleSelectFromList}
+      />
       <BottomBar
         onRecenter={handleRecenter}
         onZoomIn={handleZoomIn}

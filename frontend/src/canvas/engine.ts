@@ -118,6 +118,19 @@ export class CanvasEngine {
     this.ctx.scale(dpr, dpr)
   }
 
+  /** Centre la vue sur un bloc avec un zoom confortable. */
+  centerOnBloc(bloc: { x: number; y: number; w: number; h: number }) {
+    const rect = this.canvas.getBoundingClientRect()
+    const vw = rect.width
+    const vh = rect.height
+    const cx = bloc.x + bloc.w / 2
+    const cy = bloc.y + bloc.h / 2
+    const zoom = 1.2
+    this.state.zoom = zoom
+    this.state.offsetX = vw / 2 - cx * zoom
+    this.state.offsetY = vh / 2 - cy * zoom
+  }
+
   /** Convertit les coordonnées écran en coordonnées monde. */
   screenToWorld(screenX: number, screenY: number): { x: number; y: number } {
     const rect = this.canvas.getBoundingClientRect()
