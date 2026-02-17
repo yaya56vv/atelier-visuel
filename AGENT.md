@@ -177,6 +177,10 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 - **SidePanel** : ligne verticale discrète, déploiement cliquer-tirer, snap, champ recherche
 - **BottomBar** : sauver, recentrer, zoom +/-, toggle IA, stop
 - **ConsoleIA** : panneau droit translucide (backdrop-blur), historique chat, zone saisie, non-modale
+- **Client API** : `api.ts` — requêtes REST typées (espaces, blocs, liaisons) via proxy Vite
+- **Store espaces** : `useEspaceStore` — chargement auto, création, sélection
+- **Store blocs** : `useBlocsStore` — chargement par espace, CRUD synchronisé, debounce position/taille
+- **Intégration Canvas ↔ Backend** : bus d'événements → API calls, double-clic → création, persistance réelle
 
 ### 4.2 Ce qui est fragile (à manipuler avec précaution)
 
@@ -356,10 +360,10 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 
 ## 8. AVANCEMENT — Où on en est
 
-**Étape actuelle :** 7 / 12
-**Dernière étape validée :** 7 — Interface React : barres et panneaux
-**Prochaine étape :** 8 — Intégration Frontend ↔ Backend (API REST)
-**Critère de fin :** Espaces, blocs, liaisons se chargent/créent/modifient/suppriment avec persistance réelle. Rechargement = données restaurées.
+**Étape actuelle :** 8 / 12
+**Dernière étape validée :** 8 — Intégration Frontend ↔ Backend (API REST)
+**Prochaine étape :** 9 — Éditeur de bloc + dépôt direct
+**Critère de fin :** Double-clic ouvre l'éditeur. On peut ajouter texte, URLs, fichiers. Le dépôt direct fonctionne. Les contenus sont persistés via API.
 **Dernier verdict contrôle :** OK (17/02/2026)
 **Cycles KO consécutifs :** 0
 
