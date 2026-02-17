@@ -166,6 +166,9 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 - **Config IA** : GET/PUT par rôle (graphe, assistant), mode local/API, UPSERT
 - **Routeur IA** : dispatch vers Ollama (local) ou API OpenAI-compatible, timeout 30s, erreurs gracieuses
 - **Indexation** : génération titre_ia/resume_ia/entités/mots-clés via IA Graphe, déclenchée à l'ajout de contenu
+- **Canvas2D moteur** : boucle de rendu 60 FPS, pan/zoom, devicePixelRatio, coordonnées monde/écran
+- **Canvas2D formes** : 5 formes (cloud, rounded-rect, square, oval, circle) avec glow, gradient 3D, reflet glossy, bordure, connecteurs
+- **Canvas2D thème** : tous les paramètres visuels externalisés dans theme.ts
 
 ### 4.2 Ce qui est fragile (à manipuler avec précaution)
 
@@ -345,10 +348,10 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 
 ## 8. AVANCEMENT — Où on en est
 
-**Étape actuelle :** 2 / 12
-**Dernière étape validée :** 2 — Backend configuration IA + indexation
-**Prochaine étape :** 3 — Canvas2D : moteur de rendu et formes
-**Critère de fin :** Les 5 formes s'affichent correctement avec les 6 couleurs, effets visuels fidèles au rendu cible, zéro constante codée en dur
+**Étape actuelle :** 3 / 12
+**Dernière étape validée :** 3 — Canvas2D : moteur de rendu et formes
+**Prochaine étape :** 4 — Canvas2D : liaisons Bézier cubiques
+**Critère de fin :** Les liaisons se dessinent avec tangence réelle, zéro intersection bloc-liaison, effets lumineux visibles, liaisons ancrées toujours affichées
 **Dernier verdict contrôle :** OK (17/02/2026)
 **Cycles KO consécutifs :** 0
 
