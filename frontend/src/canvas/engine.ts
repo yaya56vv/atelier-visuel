@@ -4,6 +4,7 @@
 import { THEME } from './theme'
 import { drawBloc, type BlocVisuel, type LiaisonVisuelle } from './shapes'
 import { drawAllLiaisons } from './links'
+import { InteractionManager } from './interactions'
 
 export interface EngineState {
   blocs: BlocVisuel[]
@@ -24,12 +25,14 @@ export class CanvasEngine {
     offsetY: 0,
     zoom: 1,
   }
+  private interactions: InteractionManager
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas
     const ctx = canvas.getContext('2d')
     if (!ctx) throw new Error('Canvas 2D non supporté')
     this.ctx = ctx
+    this.interactions = new InteractionManager(this, canvas, ctx)
   }
 
   /** Met à jour la liste des blocs à afficher. */
@@ -54,8 +57,13 @@ export class CanvasEngine {
   }
 
   /** Retourne l'état actuel. */
-  getState(): Readonly<EngineState> {
+  getState(): EngineState {
     return this.state
+  }
+
+  /** Retourne le gestionnaire d'interactions. */
+  getInteractions(): InteractionManager {
+    return this.interactions
   }
 
   /** Redimensionne le canvas au pixel ratio de l'écran. */
@@ -105,7 +113,7 @@ export class CanvasEngine {
       if (!bloc.selected) drawBloc(ctx, bloc)
     }
 
-    // Dessin des liaisons (entre blocs non sélectionnés et sélectionnés)
+    // Dessin des liaisons
     drawAllLiaisons(ctx, liaisons, blocs, selectedIds)
 
     // Dessin des blocs sélectionnés au-dessus
@@ -113,14 +121,34 @@ export class CanvasEngine {
       if (bloc.selected) drawBloc(ctx, bloc)
     }
 
+    // Rendu du connecteur en cours de création (ligne temporaire)
+    const pending = this.interactions.getPendingConnector()
+    if (pending) {
+      const source = blocs.find(b => b.id === pending.sourceId)
+      if (source) {
+        const sx = source.x + source.w / 2
+        const sy = source.y + source.h / 2
+        ctx.save()
+        ctx.beginPath()
+        ctx.moveTo(sx, sy)
+        ctx.lineTo(pending.endX, pending.endY)
+        ctx.strokeStyle = 'rgba(80, 200, 120, 0.6)'
+        ctx.lineWidth = 2
+        ctx.setLineDash([6, 4])
+        ctx.stroke()
+        ctx.restore()
+      }
+    }
+
     ctx.restore()
 
     this.animationId = requestAnimationFrame(this.render)
   }
 
-  /** Lance la boucle de rendu. */
+  /** Lance la boucle de rendu et les interactions. */
   start() {
     this.resize()
+    this.interactions.attach()
     this.animationId = requestAnimationFrame(this.render)
   }
 
@@ -132,8 +160,9 @@ export class CanvasEngine {
     }
   }
 
-  /** Détruit le moteur. */
+  /** Détruit le moteur et les interactions. */
   destroy() {
     this.stop()
+    this.interactions.detach()
   }
 }

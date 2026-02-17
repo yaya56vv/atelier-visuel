@@ -170,6 +170,7 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 - **Canvas2D formes** : 5 formes (cloud, rounded-rect, square, oval, circle) avec glow, gradient 3D, reflet glossy, bordure, connecteurs
 - **Canvas2D thème** : tous les paramètres visuels externalisés dans theme.ts
 - **Canvas2D liaisons** : 4 types (simple, logique, tension, ancrée), Bézier cubiques avec tangence réelle, glow lumineux, couleurs sémantiques, liaisons ancrées toujours visibles
+- **Canvas2D interactions** : drag & drop blocs, pan (clic vide/milieu/droit), zoom molette progressif vers souris, sélection clic, curseur contextuel, hit-testing, création liaison par connecteur, redimensionnement 8 directions
 
 ### 4.2 Ce qui est fragile (à manipuler avec précaution)
 
@@ -349,10 +350,10 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 
 ## 8. AVANCEMENT — Où on en est
 
-**Étape actuelle :** 4 / 12
-**Dernière étape validée :** 4 — Canvas2D : liaisons Bézier cubiques
-**Prochaine étape :** 5 — Canvas2D : interactions utilisateur
-**Critère de fin :** Manipulation fluide des blocs (60 FPS), zoom progressif continu, sélection/survol avec feedback visuel, création de liaison fonctionnelle, redimensionnement révélant le contenu
+**Étape actuelle :** 5 / 12
+**Dernière étape validée :** 5 — Canvas2D : interactions utilisateur
+**Prochaine étape :** 6 — Canvas2D : légendes contextuelles et bus d'événements
+**Critère de fin :** Les légendes apparaissent au geste et disparaissent automatiquement. Le bus émet et reçoit les événements clés. Le Canvas et React communiquent sans couplage direct.
 **Dernier verdict contrôle :** OK (17/02/2026)
 **Cycles KO consécutifs :** 0
 
