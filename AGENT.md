@@ -183,6 +183,9 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 - **Intégration Canvas ↔ Backend** : bus d'événements → API calls, double-clic → création, persistance réelle
 - **BlocEditor** : double-clic ouvre éditeur, ajout texte/note/url/citation, suppression, dépôt direct (drag&drop fichiers, paste), contenus persistés via API
 - **Vue Liste** : SidePanel affiche blocs triables (titre/couleur/forme), recherche, sélection → centrage+zoom dans le graphe, synchronisation bidirectionnelle
+- **Service IA Assistant** : `ia_assistant.py` — protocole Observer→Interpréter→Détecter→Proposer→Attendre, score confiance, contexte espace automatique
+- **Route IA** : `POST /api/ia/ask` — dialogue avec l'assistant, dégradation gracieuse si IA non configurée
+- **ConsoleIA connectée** : dialogue live, loading state, messages formatés, espaceId requis
 
 ### 4.2 Ce qui est fragile (à manipuler avec précaution)
 
@@ -362,10 +365,10 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 
 ## 8. AVANCEMENT — Où on en est
 
-**Étape actuelle :** 10 / 12
-**Dernière étape validée :** 10 — Vue Liste synchronisée
-**Prochaine étape :** 11 — Console IA + Assistant
-**Critère de fin :** L'utilisateur peut dialoguer avec l'IA via la console. L'IA peut lire le graphe et formuler des suggestions. Le score de confiance est affiché.
+**Étape actuelle :** 11 / 12
+**Dernière étape validée :** 11 — Console IA + Assistant
+**Prochaine étape :** 12 — Configuration IA + écran de paramétrage
+**Critère de fin :** L'utilisateur peut configurer séparément IA Graphe et IA Assistant. Test de connexion. Configuration persiste entre sessions.
 **Dernier verdict contrôle :** OK (17/02/2026)
 **Cycles KO consécutifs :** 0
 

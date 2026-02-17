@@ -1,7 +1,9 @@
 // Console IA — Panneau vertical droit, translucide, jamais modale
 // Graphe visible derrière, historique en haut, zone de saisie en bas
+// Connecté au service IA Assistant via API
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import * as api from '../api'
 
 interface Message {
   id: string
@@ -11,24 +13,26 @@ interface Message {
 
 interface ConsoleIAProps {
   visible: boolean
+  espaceId: string | null
   onClose?: () => void
 }
 
-export default function ConsoleIA({ visible, onClose }: ConsoleIAProps) {
+export default function ConsoleIA({ visible, espaceId, onClose }: ConsoleIAProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
 
-  // Auto-scroll en bas quand nouveaux messages
+  // Auto-scroll
   useEffect(() => {
     if (listRef.current) {
       listRef.current.scrollTop = listRef.current.scrollHeight
     }
   }, [messages])
 
-  const handleSend = () => {
+  const handleSend = useCallback(async () => {
     const text = input.trim()
-    if (!text) return
+    if (!text || !espaceId || loading) return
 
     const userMsg: Message = {
       id: `u-${Date.now()}`,
@@ -37,9 +41,27 @@ export default function ConsoleIA({ visible, onClose }: ConsoleIAProps) {
     }
     setMessages(prev => [...prev, userMsg])
     setInput('')
+    setLoading(true)
 
-    // Placeholder — sera connecté au backend à l'étape 11
-  }
+    try {
+      const response = await api.askIA(espaceId, text)
+      const aiMsg: Message = {
+        id: `a-${Date.now()}`,
+        role: 'assistant',
+        text: response,
+      }
+      setMessages(prev => [...prev, aiMsg])
+    } catch (err) {
+      const errorMsg: Message = {
+        id: `e-${Date.now()}`,
+        role: 'assistant',
+        text: 'Erreur de connexion avec le service IA.',
+      }
+      setMessages(prev => [...prev, errorMsg])
+    } finally {
+      setLoading(false)
+    }
+  }, [input, espaceId, loading])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -55,14 +77,15 @@ export default function ConsoleIA({ visible, onClose }: ConsoleIAProps) {
       {/* En-tête */}
       <div style={styles.header}>
         <span style={styles.headerTitle}>Console IA</span>
-        <button onClick={onClose} style={styles.closeBtn} title="Fermer">x</button>
+        <button onClick={onClose} style={styles.closeBtn}>x</button>
       </div>
 
       {/* Historique */}
       <div ref={listRef} style={styles.messages}>
         {messages.length === 0 && (
           <div style={styles.empty}>
-            L'assistant IA est prêt. Posez une question sur votre espace.
+            L'assistant IA peut analyser votre espace de pensée.
+            {!espaceId && '\n\nSélectionnez un espace d\'abord.'}
           </div>
         )}
         {messages.map(msg => (
@@ -70,9 +93,18 @@ export default function ConsoleIA({ visible, onClose }: ConsoleIAProps) {
             key={msg.id}
             style={msg.role === 'user' ? styles.msgUser : styles.msgAssistant}
           >
-            {msg.text}
+            {msg.role === 'assistant' && (
+              <span style={styles.roleLabel}>IA</span>
+            )}
+            <span style={styles.msgText}>{msg.text}</span>
           </div>
         ))}
+        {loading && (
+          <div style={styles.msgAssistant}>
+            <span style={styles.roleLabel}>IA</span>
+            <span style={styles.loading}>Analyse en cours...</span>
+          </div>
+        )}
       </div>
 
       {/* Zone de saisie */}
@@ -81,11 +113,21 @@ export default function ConsoleIA({ visible, onClose }: ConsoleIAProps) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Demandez à l'IA..."
+          placeholder={espaceId ? "Demandez à l'IA..." : "Sélectionnez un espace"}
           style={styles.textarea}
           rows={2}
+          disabled={!espaceId || loading}
         />
-        <button onClick={handleSend} style={styles.sendBtn}>Envoyer</button>
+        <button
+          onClick={handleSend}
+          style={{
+            ...styles.sendBtn,
+            opacity: (!espaceId || loading || !input.trim()) ? 0.4 : 1,
+          }}
+          disabled={!espaceId || loading || !input.trim()}
+        >
+          {loading ? '...' : 'Envoyer'}
+        </button>
       </div>
     </aside>
   )
@@ -138,6 +180,7 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: 'center',
     marginTop: 20,
     lineHeight: 1.5,
+    whiteSpace: 'pre-line',
   },
   msgUser: {
     alignSelf: 'flex-end',
@@ -158,6 +201,23 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 12,
     maxWidth: '85%',
     wordBreak: 'break-word' as const,
+    whiteSpace: 'pre-wrap',
+  },
+  roleLabel: {
+    display: 'block',
+    color: 'rgba(80, 200, 120, 0.6)',
+    fontSize: 9,
+    fontWeight: 600,
+    textTransform: 'uppercase' as const,
+    marginBottom: 2,
+  },
+  msgText: {
+    display: 'block',
+    lineHeight: 1.4,
+  },
+  loading: {
+    color: 'rgba(80, 200, 120, 0.5)',
+    fontStyle: 'italic',
   },
   inputZone: {
     display: 'flex',

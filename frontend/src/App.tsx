@@ -168,6 +168,7 @@ function App() {
       />
       <ConsoleIA
         visible={showConsole}
+        espaceId={espaceStore.espaceActifId}
         onClose={() => setShowConsole(false)}
       />
 

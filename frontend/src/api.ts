@@ -158,3 +158,13 @@ export async function addContenu(blocId: string, data: {
 export async function deleteContenu(blocId: string, contenuId: string): Promise<void> {
   return request(`/blocs/${blocId}/contenus/${contenuId}`, { method: 'DELETE' })
 }
+
+// ─── IA Assistant ────────────────────────────────────────
+
+export async function askIA(espaceId: string, question: string): Promise<string> {
+  const data = await request<{ response: string }>('/ia/ask', {
+    method: 'POST',
+    body: JSON.stringify({ espace_id: espaceId, question }),
+  })
+  return data.response
+}
