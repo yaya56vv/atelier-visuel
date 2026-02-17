@@ -6,6 +6,7 @@ interface BottomBarProps {
   onZoomIn?: () => void
   onZoomOut?: () => void
   onToggleIA?: () => void
+  onConfigIA?: () => void
   onStop?: () => void
   iaActive?: boolean
 }
@@ -16,6 +17,7 @@ export default function BottomBar({
   onZoomIn,
   onZoomOut,
   onToggleIA,
+  onConfigIA,
   onStop,
   iaActive = false,
 }: BottomBarProps) {
@@ -45,6 +47,9 @@ export default function BottomBar({
           title="IA Observatrice"
         >
           IA
+        </button>
+        <button onClick={onConfigIA} style={styles.btn} title="Configuration IA">
+          Config
         </button>
         <span style={styles.sep} />
         <button onClick={onStop} style={styles.btnStop} title="Arrêter">

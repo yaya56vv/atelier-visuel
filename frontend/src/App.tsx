@@ -6,6 +6,7 @@ import SidePanel from './components/SidePanel'
 import BottomBar from './components/BottomBar'
 import ConsoleIA from './components/ConsoleIA'
 import BlocEditor from './components/BlocEditor'
+import ConfigIA from './components/ConfigIA'
 import { useEspaceStore } from './stores/espaceStore'
 import { useBlocsStore } from './stores/blocsStore'
 
@@ -16,6 +17,7 @@ function App() {
   const [backendOk, setBackendOk] = useState(false)
   const [editBlocId, setEditBlocId] = useState<string | null>(null)
   const [selectedBlocId, setSelectedBlocId] = useState<string | null>(null)
+  const [showConfig, setShowConfig] = useState(false)
 
   const espaceStore = useEspaceStore()
   const blocsStore = useBlocsStore(espaceStore.espaceActifId)
@@ -164,6 +166,7 @@ function App() {
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onToggleIA={() => setShowConsole(v => !v)}
+        onConfigIA={() => setShowConfig(true)}
         iaActive={showConsole}
       />
       <ConsoleIA
@@ -171,6 +174,11 @@ function App() {
         espaceId={espaceStore.espaceActifId}
         onClose={() => setShowConsole(false)}
       />
+
+      {/* Configuration IA */}
+      {showConfig && (
+        <ConfigIA onClose={() => setShowConfig(false)} />
+      )}
 
       {/* Éditeur de bloc */}
       {editBlocId && backendOk && (

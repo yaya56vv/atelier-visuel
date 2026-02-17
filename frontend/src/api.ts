@@ -161,6 +161,43 @@ export async function deleteContenu(blocId: string, contenuId: string): Promise<
 
 // ─── IA Assistant ────────────────────────────────────────
 
+// ─── Configuration IA ────────────────────────────────────
+
+export interface ConfigIAAPI {
+  role: string
+  mode: string | null
+  url: string | null
+  modele: string | null
+  cle_api: string | null
+}
+
+export async function getConfigIA(role: string): Promise<ConfigIAAPI> {
+  return request(`/config-ia/${role}`)
+}
+
+export async function updateConfigIA(role: string, data: {
+  mode: string
+  url?: string
+  modele?: string
+  cle_api?: string
+}): Promise<ConfigIAAPI> {
+  return request(`/config-ia/${role}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function testIAConnection(role: string): Promise<boolean> {
+  try {
+    const data = await request<{ ok: boolean }>(`/config-ia/${role}/test`, {
+      method: 'POST',
+    })
+    return data.ok
+  } catch {
+    return false
+  }
+}
+
 export async function askIA(espaceId: string, question: string): Promise<string> {
   const data = await request<{ response: string }>('/ia/ask', {
     method: 'POST',
