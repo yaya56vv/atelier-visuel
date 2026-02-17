@@ -5,6 +5,7 @@ import TopBar from './components/TopBar'
 import SidePanel from './components/SidePanel'
 import BottomBar from './components/BottomBar'
 import ConsoleIA from './components/ConsoleIA'
+import BlocEditor from './components/BlocEditor'
 import { useEspaceStore } from './stores/espaceStore'
 import { useBlocsStore } from './stores/blocsStore'
 
@@ -13,6 +14,7 @@ function App() {
   const engineRef = useRef<CanvasEngine | null>(null)
   const [showConsole, setShowConsole] = useState(false)
   const [backendOk, setBackendOk] = useState(false)
+  const [editBlocId, setEditBlocId] = useState<string | null>(null)
 
   const espaceStore = useEspaceStore()
   const blocsStore = useBlocsStore(espaceStore.espaceActifId)
@@ -70,21 +72,24 @@ function App() {
     return () => unsubs.forEach(fn => fn())
   }, [backendOk, blocsStore.moveBloc, blocsStore.resizeBloc, blocsStore.createLiaison])
 
-  // Double-clic sur le canvas = créer un bloc
+  // Double-clic sur le canvas
   useEffect(() => {
     const canvas = canvasRef.current
     const engine = engineRef.current
     if (!canvas || !engine || !backendOk || !espaceStore.espaceActifId) return
 
     const handler = (e: MouseEvent) => {
-      // Ne créer que si double-clic dans le vide (pas sur un bloc)
       const state = engine.getState()
-      const hasSelected = state.blocs.some(b => b.selected)
-      // Si un bloc est sélectionné au moment du double-clic, c'est un double-clic sur bloc → éditeur (étape 9)
-      if (hasSelected) return
+      const selectedBloc = state.blocs.find(b => b.selected)
 
-      const pos = engine.screenToWorld(e.clientX, e.clientY)
-      blocsStore.createBloc(pos.x - 100, pos.y - 60)
+      if (selectedBloc) {
+        // Double-clic sur un bloc sélectionné → ouvrir l'éditeur
+        setEditBlocId(selectedBloc.id)
+      } else {
+        // Double-clic dans le vide → créer un nouveau bloc
+        const pos = engine.screenToWorld(e.clientX, e.clientY)
+        blocsStore.createBloc(pos.x - 100, pos.y - 60)
+      }
     }
 
     canvas.addEventListener('dblclick', handler)
@@ -142,6 +147,14 @@ function App() {
         visible={showConsole}
         onClose={() => setShowConsole(false)}
       />
+
+      {/* Éditeur de bloc */}
+      {editBlocId && backendOk && (
+        <BlocEditor
+          blocId={editBlocId}
+          onClose={() => setEditBlocId(null)}
+        />
+      )}
 
       {/* Indicateur backend */}
       {!backendOk && (

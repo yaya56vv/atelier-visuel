@@ -126,3 +126,35 @@ export async function createLiaison(data: {
 export async function deleteLiaison(id: string): Promise<void> {
   return request(`/liaisons/${id}`, { method: 'DELETE' })
 }
+
+// ─── Contenus de bloc ────────────────────────────────────
+
+export interface ContenuAPI {
+  id: string
+  bloc_id: string
+  type: string
+  contenu: string | null
+  metadata: string | null
+  ordre: number
+  created_at: string
+}
+
+export async function getBloc(id: string): Promise<BlocAPI & { contenus: ContenuAPI[] }> {
+  return request(`/blocs/${id}`)
+}
+
+export async function addContenu(blocId: string, data: {
+  type: string
+  contenu?: string
+  metadata?: string
+  ordre?: number
+}): Promise<ContenuAPI> {
+  return request(`/blocs/${blocId}/contenus`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteContenu(blocId: string, contenuId: string): Promise<void> {
+  return request(`/blocs/${blocId}/contenus/${contenuId}`, { method: 'DELETE' })
+}

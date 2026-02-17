@@ -181,6 +181,7 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 - **Store espaces** : `useEspaceStore` — chargement auto, création, sélection
 - **Store blocs** : `useBlocsStore` — chargement par espace, CRUD synchronisé, debounce position/taille
 - **Intégration Canvas ↔ Backend** : bus d'événements → API calls, double-clic → création, persistance réelle
+- **BlocEditor** : double-clic ouvre éditeur, ajout texte/note/url/citation, suppression, dépôt direct (drag&drop fichiers, paste), contenus persistés via API
 
 ### 4.2 Ce qui est fragile (à manipuler avec précaution)
 
@@ -360,10 +361,10 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 
 ## 8. AVANCEMENT — Où on en est
 
-**Étape actuelle :** 8 / 12
-**Dernière étape validée :** 8 — Intégration Frontend ↔ Backend (API REST)
-**Prochaine étape :** 9 — Éditeur de bloc + dépôt direct
-**Critère de fin :** Double-clic ouvre l'éditeur. On peut ajouter texte, URLs, fichiers. Le dépôt direct fonctionne. Les contenus sont persistés via API.
+**Étape actuelle :** 9 / 12
+**Dernière étape validée :** 9 — Éditeur de bloc + dépôt direct
+**Prochaine étape :** 10 — Vue Liste synchronisée
+**Critère de fin :** La liste affiche tous les blocs avec titre_ia, extrait, métadonnées. Sélection dans la liste → centrage + zoom dans le graphe. Modification dans le graphe → mise à jour instantanée de la liste.
 **Dernier verdict contrôle :** OK (17/02/2026)
 **Cycles KO consécutifs :** 0
 
