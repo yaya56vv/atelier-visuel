@@ -150,6 +150,24 @@ On ne crée pas de README, de fichiers DOCS/, ni de "documentation produit" tant
 
 Les logs ne sont là que pour toi, pendant ton développement. Si tu as besoin de débugger, ajoute des logs temporaires.
 
+**f) JAMAIS de clés API, tokens, ou mots de passe dans le code**
+Règle absolue. Aucune clé API, aucun token, aucun secret ne doit apparaître nulle part : ni dans le code, ni dans les tests, ni dans les logs, ni dans les commits. Toutes les clés passent par le fichier `.env` (qui est dans `.gitignore`). Les tests utilisent des variables d'environnement, jamais de valeurs en dur. Même les fausses clés de test sont interdites car elles créent un mauvais réflexe.
+
+**g) Le fichier .env est un prérequis bloquant**
+Le codeur doit créer un fichier `.env.example` à la racine du projet dès l'initialisation (Phase 2). Ce fichier contient les noms des variables nécessaires SANS les valeurs. Le fichier `.env` réel (avec les valeurs) doit être rempli par l'humain AVANT le premier test fonctionnel. Si .env n'existe pas au moment du contrôle, c'est un KO immédiat.
+
+Procédure obligatoire :
+1. Le codeur crée `.env.example` (noms de variables, pas de valeurs)
+2. Le codeur ajoute `.env` dans `.gitignore`
+3. Le codeur demande à l'humain de créer `.env` et d'y mettre ses clés
+4. Le code ne démarre pas / les tests ne passent pas tant que .env est absent
+
+**h) Les données initiales (seed) font partie du code**
+Si CENTRAL.md prévoit des données au lancement (espaces par défaut, configurations, données de démonstration), elles doivent être implémentées dans le code d'initialisation du backend (ex: fonction seed dans init_db). Ce n'est pas optionnel, ce n'est pas "pour plus tard". Sans données initiales, l'application est une coquille vide — donc un KO.
+
+**i) CENTRAL.md est la commande, le code est l'exécution**
+Tout ce qui est décrit dans CENTRAL.md (hors mentions explicites [RÉSERVÉ] ou [FUTUR]) doit se retrouver implémenté dans le code à l'issue du séquençage. Si CENTRAL.md décrit une grille sémantique, des règles d'affichage, des heuristiques, des données par défaut, des comportements utilisateur — ils doivent exister dans le code. Le codeur n'a pas le droit de décider seul qu'une fonctionnalité décrite dans CENTRAL.md est "hors scope" ou "pour plus tard". S'il estime que quelque chose est trop complexe ou irréalisable, il le signale à l'humain et attend sa décision.
+
 **Règle simple :** un log ne reste de manière permanente que s'il est utile pour l'exploitation ou pour le debug futur. Sinon, il doit être retiré avant la fin de mission.
 
 ### 3.4 Les règles communes à toute l'équipe (humain inclus)

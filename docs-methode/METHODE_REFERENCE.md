@@ -78,23 +78,96 @@ et note la date et le changement en bas du document.
    - Points d'entrée (main, App, routes de base)
    - Architecture modulaire conforme à CENTRAL.md
    - Aucune logique métier, juste la structure d'accueil
-3. Personnaliser **AGENT.md** à partir du template :
+3. **Créer les fichiers d'environnement :**
+   - `.env.example` à la racine (noms des variables, SANS valeurs)
+   - Vérifier que `.env` est bien dans `.gitignore`
+   - **Demander explicitement à l'humain** de créer `.env` avec ses clés avant tout test
+4. Personnaliser **AGENT.md** à partir du template :
    - Section 2 (sens du projet) d'après CENTRAL.md
    - Section 4 (état des lieux) d'après le squelette créé
    - Section 5 (carte du projet) d'après le squelette créé
-4. Créer **SEQUENCAGE.md** :
+5. Créer **SEQUENCAGE.md** :
    - Découpage du développement en étapes numérotées
-   - Pour chaque étape : objectif, critère de fin, agents concernés
+   - Pour chaque étape : objectif, critère de fin **vérifiable visuellement**, agents concernés
+   - **Inclure une étape de seed de données initiales** si CENTRAL.md prévoit des données au lancement (espaces, configurations par défaut, blocs de démo)
    - Marquage des étapes qui déclenchent un contrôle (toutes par défaut,
      sauf micro-étapes regroupables)
    - Identification des jalons pour l'Agent Analyste (tous les 3-5 étapes)
-5. Initialiser le repo Git local + premier commit + push GitHub
+6. Initialiser le repo Git local + premier commit + push GitHub
 
-**Fruits :** Code squelette + AGENT.md + SEQUENCAGE.md + repo Git/GitHub
+**Fruits :** Code squelette + AGENT.md + SEQUENCAGE.md + MATRICE_COUVERTURE (dans le chat) + .env.example + repo Git/GitHub
 
 **Pourquoi le séquençage est ici et pas en Phase 1 :**
 On séquence sur du concret. C'est en voyant la structure réelle du code
 qu'on peut découper intelligemment les étapes de développement.
+
+---
+
+### RÈGLES IMPÉRATIVES DE LA PHASE 2 (aucune liberté autorisée)
+
+Ces règles sont absolues. L'agent Initial ne peut ni les contourner, ni les interpréter, ni les adapter. Toute dérogation doit être explicitement demandée à l'humain et validée par lui AVANT d'agir.
+
+#### Règle I.1 — Couverture intégrale de CENTRAL.md
+
+**Le séquençage doit couvrir 100% des fonctionnalités, comportements et données décrits dans CENTRAL.md.**
+
+Chaque fonctionnalité, chaque comportement utilisateur, chaque donnée initiale, chaque règle d'affichage, chaque grille de lecture décrite dans CENTRAL.md doit apparaître dans au moins une étape du séquençage.
+
+L'agent n'a PAS le droit de :
+- Décider qu'une fonctionnalité est "hors scope V1"
+- Repousser une fonctionnalité à une version future
+- Simplifier ou réduire le périmètre décrit dans CENTRAL.md
+- Regrouper ou fusionner des fonctionnalités de manière à en perdre une
+- Ignorer les données initiales (espaces par défaut, configurations, données de démonstration)
+
+Si l'agent estime qu'une fonctionnalité est trop complexe ou irréalisable dans le cadre actuel, il **doit le signaler explicitement à l'humain** dans la discussion et **attendre sa décision**. Il ne supprime jamais silencieusement.
+
+CENTRAL.md est la commande. Le séquençage est le plan d'exécution de cette commande. Pas une version réduite.
+
+#### Règle I.2 — Squelette structurant la vision complète
+
+**Le squelette de code doit prévoir des points d'accueil pour TOUT ce que CENTRAL.md décrit, pas seulement les bases techniques.**
+
+Pour chaque fonctionnalité décrite dans CENTRAL.md, le squelette doit contenir :
+- Le fichier ou module concerné (même vide avec commentaire d'intention)
+- La fonction ou le point d'entrée qui accueillera l'implémentation
+- Les imports et connexions nécessaires pour que le module s'intègre naturellement
+
+Le but : quand un codeur arrive à l'étape N, il trouve une structure prête qui l'attend. Il n'a pas à créer la structure ET implémenter en même temps. Les pièces du puzzle sont déjà découpées, il ne reste qu'à les assembler.
+
+Anti-pattern interdit : un squelette purement technique (framework + config + routes vides) qui ignore les spécificités métier décrites dans CENTRAL.md.
+
+#### Règle I.3 — Matrice de couverture obligatoire
+
+**Après avoir créé le séquençage, l'agent DOIT produire une matrice de couverture dans la discussion.**
+
+Format :
+
+| # | Fonctionnalité / Comportement / Donnée (décrit dans CENTRAL.md) | Étape du séquençage | Couvert |
+|---|---|---|---|
+| 1 | [Description extraite de CENTRAL.md] | Étape N | ✅ |
+| 2 | [Description extraite de CENTRAL.md] | Étape M | ✅ |
+| 3 | [Description extraite de CENTRAL.md] | — | ❌ |
+
+Règles de la matrice :
+- Chaque section de CENTRAL.md doit être parcourue systématiquement
+- Les fonctionnalités marquées [RÉSERVÉ] ou [FUTUR] dans CENTRAL.md sont exclues de la matrice (elles ne sont pas attendues dans cette version)
+- Toute ligne avec ❌ est un **problème bloquant**. L'agent doit soit ajouter une étape au séquençage, soit expliquer à l'humain pourquoi c'est impossible et attendre sa décision.
+- L'humain valide la matrice AVANT que le développement commence (Phase 3)
+- La matrice est postée dans le chat, pas stockée en fichier
+
+#### Règle I.4 — Critères de fin vérifiables par un humain
+
+**Les critères de fin de chaque étape doivent être vérifiables visuellement ou fonctionnellement par un humain non-technique.**
+
+Formulation interdite : "Les données sont persistées en base", "Le status code est 200", "Le test unitaire passe".
+
+Formulation obligatoire : "Quand l'utilisateur fait [action], il voit [résultat visible]". Exemples :
+- "L'utilisateur ouvre l'application et voit deux espaces : IDÉES et CONCEPTION"
+- "L'utilisateur double-clique sur le canvas et un bloc apparaît avec la forme et la couleur par défaut"
+- "L'utilisateur sélectionne un bloc et la légende contextuelle affiche la signification de sa couleur et de sa forme"
+
+Le critère doit pouvoir être vérifié par quelqu'un qui ouvre l'application et regarde l'écran, sans lancer de commande technique.
 
 ---
 
@@ -189,6 +262,10 @@ qu'on peut découper intelligemment les étapes de développement.
 - Après correction → nouveau cycle complet de contrôle
 - Après 3 KO consécutifs → arrêt + intervention humaine
 - Timeout : si >4h de travail actif → pause + évaluation humaine
+- **Test visuel obligatoire** : toute étape produisant un résultat visible DOIT être testée dans le navigateur. Un test exclusivement HTTP/programmatique ne valide JAMAIS une étape frontend ou intégration.
+- **Prérequis .env** : aucun test ne peut être validé sans fichier .env fonctionnel. KO immédiat sinon.
+- **Rigueur constante** : la qualité des contrôles ne diminue pas au fil des étapes. Le Contrôleur Conformité rejette les logs bâclés.
+- **JAMAIS de tests sur données jetables auto-générées** : tester sur des données persistées représentatives (seed ou données créées via l'interface)
 
 ---
 
@@ -340,11 +417,107 @@ Ajout proposé à AGENT.md pour le suivi d'avancement :
 | Contrôleur Hygiène | 4 | Vérifie propreté | Non | Non | LOG HYGIÈNE (chat) |
 | Contrôleur Conformité | 4 | Vue holistique + verdict | Non | Non | Verdict + directive (chat) |
 | Codeur-Correcteur | 4 | Corrige selon directive | Oui | Oui (§4,5,7) | Code corrigé + AGENT.md |
+| **Codeur-Remédiation** | **R** | **Applique les corrections post-diagnostic structurel** | **Oui** | **Oui (§4,5,7,8)** | **Code corrigé + AGENT.md + SEQUENCAGE.md si modifié** |
 | **Orchestrateur** | **Toutes** | **Automatise le workflow complet** | **Non** | **Oui (§8)** | **Projet terminé** |
 
 ---
 
-## 8. L'ORCHESTRATEUR — /build
+## 8. PHASE DE REMÉDIATION — /remediation
+
+### Le concept
+
+La remédiation est une phase exceptionnelle qui se déclenche quand un **retour d'expérience révèle des failles structurelles** dans le code, la méthode, ou les deux. Ce n'est pas une correction d'étape classique (Phase 4). C'est une reprise en main globale après découverte d'un problème systémique.
+
+### Quand déclencher une remédiation
+
+- L'application est techniquement "complète" mais ne fonctionne pas en réel
+- Un retour d'expérience révèle que la méthode elle-même avait des lacunes
+- La méthode a été mise à jour et les corrections doivent être appliquées au code existant
+- Le séquençage s'avère incomplet par rapport à CENTRAL.md
+- Des règles fondamentales n'ont pas été respectées (seed manquant, tests insuffisants, .env absent)
+
+### Déclencheur
+
+L'humain décide. La remédiation ne se déclenche jamais automatiquement.
+
+### Le flux de remédiation
+
+```
+ DÉCOUVERTE DU PROBLÈME
+        │
+        ▼
+┌─────────────────────────────────────┐
+│  ÉTAPE R.1 — Diagnostic                │
+│  Identifier les causes racines          │
+│  Distinguer : problème de méthode       │
+│  vs problème de code vs les deux         │
+└──────────────────┬──────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────┐
+│  ÉTAPE R.2 — Correction de la méthode   │
+│  Modifier les documents de la méthode   │
+│  (METHODE_REFERENCE, CONTROL_LOOP,      │
+│  AGENT_template, slash commands)         │
+└──────────────────┬──────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────┐
+│  ÉTAPE R.3 — Prompt de remédiation      │
+│  Rédiger un prompt complet pour le       │
+│  codeur-correcteur, intégrant :          │
+│  - Le diagnostic (ce qui ne va pas)      │
+│  - Les règles mises à jour               │
+│  - Les corrections concrètes attendues   │
+│  - Les critères de succès visuels        │
+└──────────────────┬──────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────┐
+│  ÉTAPE R.4 — Exécution                  │
+│  L'agent codeur exécute le prompt.       │
+│  Il applique les corrections au code     │
+│  existant ET met à jour AGENT.md,        │
+│  SEQUENCAGE.md si nécessaire.            │
+└──────────────────┬──────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────┐
+│  ÉTAPE R.5 — Contrôle complet           │
+│  Boucle de contrôle standard (Phase 4)  │
+│  avec les règles mises à jour            │
+│  (tests visuels obligatoires, etc.)      │
+└─────────────────────────────────────┘
+```
+
+### Structure du prompt de remédiation (R.3)
+
+Le prompt destiné au codeur-correcteur doit suivre cette structure :
+
+```
+1. CONTEXTE : Ce qui s'est passé, pourquoi on en est là
+2. DIAGNOSTIC : Les problèmes identifiés (liste précise)
+3. RÈGLES MISÀ JOUR : Les nouvelles règles à respecter désormais
+4. CORRECTIONS DEMANDÉES : Actions concrètes, numérotées, priorisées
+5. CRITÈRES DE SUCCÈS : Vérifiables visuellement par l'humain
+6. FICHIERS À MODIFIER : Liste explicite
+7. INTERDICTIONS : Ce que le codeur ne doit PAS faire
+```
+
+Le prompt doit être autonome : l'agent qui le reçoit doit pouvoir travailler sans poser de question. Tout le contexte nécessaire est dans le prompt.
+
+### Règles de la remédiation
+
+1. La remédiation ne remplace jamais le code existant en entier. Elle corrige, complète, et met en conformité.
+2. Le codeur-correcteur lit AGENT.md AVANT de commencer (comme toujours).
+3. Le codeur-correcteur met à jour AGENT.md APRES avoir fini (comme toujours).
+4. La boucle de contrôle (Phase 4) s'applique après la remédiation, avec les règles mises à jour.
+5. Si la remédiation implique une modification du SEQUENCAGE.md (ajout d'étapes manquantes), le codeur produit une nouvelle matrice de couverture.
+6. L'humain valide le résultat final visuellement.
+
+---
+
+## 9. L'ORCHESTRATEUR — /build
 
 ### Le concept
 

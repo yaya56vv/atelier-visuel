@@ -40,7 +40,7 @@ async def call_ia(role: str, prompt: str, system: str = "") -> str | None:
 
 
 async def _call_ollama(url: str | None, modele: str | None, prompt: str, system: str) -> str | None:
-    """Appel vers Ollama / LM Studio (format OpenAI-compatible)."""
+    """Appel vers Ollama / LM Studio (format Ollama natif)."""
     if not url or not modele:
         return None
 
@@ -56,12 +56,19 @@ async def _call_ollama(url: str | None, modele: str | None, prompt: str, system:
 
 
 async def _call_api(url: str | None, modele: str | None, cle_api: str | None, prompt: str, system: str) -> str | None:
-    """Appel vers une API externe (format OpenAI-compatible)."""
+    """Appel vers une API externe OpenAI-compatible (OpenRouter, OpenAI, etc.)."""
     if not url or not modele or not cle_api:
         return None
 
-    endpoint = f"{url.rstrip('/')}/v1/chat/completions"
-    headers = {"Authorization": f"Bearer {cle_api}", "Content-Type": "application/json"}
+    # L'URL contient déjà le préfixe (ex: https://openrouter.ai/api/v1)
+    # On ajoute seulement /chat/completions
+    endpoint = f"{url.rstrip('/')}/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {cle_api}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "http://localhost:3000",
+        "X-Title": "Atelier Visuel de Pensée",
+    }
     messages = []
     if system:
         messages.append({"role": "system", "content": system})

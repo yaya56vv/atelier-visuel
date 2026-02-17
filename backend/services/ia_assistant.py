@@ -16,12 +16,37 @@ Chaque bloc a :
 
 Les liaisons entre blocs ont un type : simple, logique, tension, ancrée.
 
-Ton protocole d'intervention :
+## Heuristiques de liaisons
+
+### Règles de flux naturel
+- R1 : Le vert nourrit le jaune (fait → insight) — liaison suggérée jaune
+- R2 : L'orange appelle le jaune (problème → solution) — liaison suggérée orange
+- R3 : Le bleu structure le mauve (logique → concept) — liaison suggérée bleue
+- R4 : Le violet fonde le bleu (sens → cadre logique) — liaison suggérée violette
+- R5 : Le mauve explore le vert (hypothèse → faits) — liaison suggérée verte
+
+### Règles d'alerte
+- A1 : Bloc orange sans liaison sortante → "Ce problème n'a pas encore de piste de résolution."
+- A2 : Bloc jaune sans liaison entrante → "Cet insight semble flotter. Sur quels faits s'appuie-t-il ?"
+- A3 : Deux blocs orange liés mutuellement → "Tension circulaire détectée. Un bloc jaune pourrait débloquer."
+- A4 : Bloc bleu non relié à un violet → "Ce cadre logique manque de fondation."
+- A5 : Bloc mauve isolé → "Ce concept exploratoire est isolé."
+
+### Règles de complétude
+- C1 : Beaucoup de vert, pas de jaune → "Vous avez beaucoup de matière. Prêt pour un premier insight ?"
+- C2 : Beaucoup d'orange, peu de jaune → "Plusieurs problèmes. Lequel traiter en priorité ?"
+- C3 : Pas de violet → "Le graphe manque d'ancrage. Quel est le sens profond ?"
+- C4 : Tout en nuage → "Beaucoup d'intuitions. Laquelle mérite d'être structurée ?"
+- C5 : Pas de cercle → "Le graphe n'a pas de noyau. Quelle idée est la plus centrale ?"
+
+## Ton protocole d'intervention
 1. OBSERVER : décris ce que tu vois dans l'espace
-2. INTERPRÉTER : identifie les patterns, clusters, flux
-3. DÉTECTER : signale les incohérences, blocs isolés, tensions non résolues
-4. PROPOSER : suggère des actions concrètes (liaisons, réorganisations, questions)
+2. INTERPRÉTER : identifie les patterns, clusters, flux en appliquant les heuristiques ci-dessus
+3. DÉTECTER : signale les alertes (A1-A5) et les manques de complétude (C1-C5)
+4. PROPOSER : suggère des actions concrètes (liaisons selon R1-R5, réorganisations, questions)
 5. ATTENDRE : laisse l'utilisateur décider
+
+Format de suggestion : [Observation] → [Interprétation] → [Suggestion] → [Score confiance]
 
 Termine TOUJOURS ta réponse par un score de confiance : [Confiance: X/10]
 
@@ -49,6 +74,16 @@ async def build_context(espace_id: str) -> str:
         "SELECT * FROM liaisons WHERE espace_id = ? ORDER BY created_at", (espace_id,)
     )
 
+    # Charger les contenus de chaque bloc
+    bloc_contenus = {}
+    for b in blocs:
+        b_dict = dict(b)
+        contenus = await db.execute_fetchall(
+            "SELECT type, contenu FROM contenus_bloc WHERE bloc_id = ? ORDER BY ordre",
+            (b_dict["id"],),
+        )
+        bloc_contenus[b_dict["id"]] = [dict(c) for c in contenus]
+
     # Construire le contexte textuel
     lines = [f"Espace : {espace['nom']} (thème: {espace['theme']})"]
     lines.append(f"Nombre de blocs : {len(blocs)}")
@@ -59,11 +94,16 @@ async def build_context(espace_id: str) -> str:
     for b in blocs:
         b = dict(b)
         bloc_map[b["id"]] = b
-        titre = b.get("titre_ia") or b.get("titre") or "(sans titre)"
+        titre = b.get("titre_ia") or "(sans titre)"
         resume = b.get("resume_ia") or ""
         lines.append(f"- Bloc [{b['couleur']}/{b['forme']}] \"{titre}\"")
         if resume:
             lines.append(f"  Résumé: {resume}")
+        # Ajouter les contenus textuels
+        contenus = bloc_contenus.get(b["id"], [])
+        for c in contenus:
+            if c.get("contenu"):
+                lines.append(f"  Contenu ({c['type']}): {c['contenu'][:200]}")
 
     if liaisons:
         lines.append("")
@@ -72,8 +112,8 @@ async def build_context(espace_id: str) -> str:
             li = dict(li)
             src = bloc_map.get(li["bloc_source_id"], {})
             dst = bloc_map.get(li["bloc_cible_id"], {})
-            src_titre = src.get("titre_ia") or src.get("titre") or "?"
-            dst_titre = dst.get("titre_ia") or dst.get("titre") or "?"
+            src_titre = src.get("titre_ia") or "?"
+            dst_titre = dst.get("titre_ia") or "?"
             lines.append(f"  {src_titre} --[{li['type']}]--> {dst_titre}")
 
     return "\n".join(lines)

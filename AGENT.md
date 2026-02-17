@@ -137,6 +137,10 @@ Le seul document de référence vivant, c'est AGENT.MD (celui-ci). On ne crée p
 
 Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste de manière permanente que s'il est utile pour l'exploitation ou pour le debug futur.
 
+**f) JAMAIS de clés API, tokens, ou mots de passe dans le code**
+ JAMAIS de clés API, tokens, ou secrets dans le code. Tout passe par .env (dans .gitignore).
+Règle absolue. Aucune clé API, aucun token, aucun secret ne doit apparaître nulle part : ni dans le code, ni dans les tests, ni dans les logs, ni dans les commits. Toutes les clés passent par le fichier `.env` (qui est dans `.gitignore`). Les tests utilisent des variables d'environnement, jamais de valeurs en dur. Même les fausses clés de test sont interdites car elles créent un mauvais réflexe.
+
 ### 3.4 Les règles communes à toute l'équipe (humain inclus)
 
 - **Clarté** > quantité
@@ -188,10 +192,16 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 - **ConsoleIA connectée** : dialogue live, loading state, messages formatés, espaceId requis
 - **ConfigIA** : écran de configuration IA — deux sections (Graphe/Assistant), mode local/API, URL/modèle/clé API, sauvegarde, test de connexion backend (Ollama tags / API models), persistance SQLite
 - **Bouton Config** : accessible depuis BottomBar, ouvre le panneau ConfigIA en overlay
+- **Seed données initiales** : 2 espaces (IDÉES, CONCEPTION), 6 blocs démo avec contenus textuels, 4 liaisons, config IA OpenRouter pré-remplie
+- **Chargement .env** : python-dotenv charge les variables au démarrage, avertissement si absent
+- **Légendes matrice §5.4** : signification croisée couleur×forme (ex: vert+nuage = "Observation floue") affichée en gras
+- **Heuristiques IA §5.5** : règles R1-R5 (flux), A1-A5 (alertes), C1-C5 (complétude) intégrées au system prompt assistant
+- **Routeur IA OpenRouter** : endpoint /chat/completions correct, headers HTTP-Referer/X-Title, modèle anthropic/claude-opus-4.6
 
 ### 4.2 Ce qui est fragile (à manipuler avec précaution)
 
-- Rien encore — le projet est un squelette vide
+- **Seed des données** : la fonction `seed_db()` ne s'exécute que si la base est vide. Si on modifie le seed, il faut supprimer `data/atelier.db` pour qu'il s'applique.
+- **Clé API dans config_ia** : l'endpoint GET /config-ia/{role} retourne la clé API en clair. Acceptable en local, à masquer si l'API est exposée.
 
 ### 4.3 Zones interdites sans validation explicite de l'humain
 
@@ -199,6 +209,7 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 - `SEQUENCAGE.md` : Plan de développement — seul l'humain valide les changements
 - `backend/db/schema.sql` : Schéma de la base de données — toute modification affecte l'ensemble du projet
 - `.claude/commands/` : Slash commands de la méthode multi-agents — infrastructure de travail
+- `.env` : Variables d'environnement (clés API, tokens) — ne doit JAMAIS être commité ni lu dans les logs
 
 **RÈGLE ABSOLUE :** Si tu t'apprêtes à modifier un fichier de cette liste, **relis cette section ET demande validation humaine explicite avant de coder**.
 
@@ -307,6 +318,8 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 - `frontend/src/components/ConfigIA.tsx` : Écran config IA — 2 RoleSection (graphe/assistant), mode/URL/modèle/clé API, save + test
 - `frontend/src/api.ts` : Client API REST — toutes les routes (espaces, blocs, liaisons, contenus, config IA, IA assistant)
 
+- `.env.example` : Template des variables d'environnement (clés API OpenRouter, modèles IA)
+
 **Fichiers suspects :** Aucun pour l'instant.
 
 ### 5.4 Fonctions critiques
@@ -315,6 +328,7 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 - `close_db()` (`backend/db/database.py`) : Ferme proprement la connexion. Sans elle, risque de corruption.
 - `lifespan()` (`backend/main.py`) : Cycle de vie FastAPI — garantit init_db au démarrage et close_db à l'arrêt.
 - `test_connection()` (`backend/api/config_ia.py`) : Teste la connexion IA par rôle — vérifie Ollama `/api/tags` (local) ou `/models` (API externe), timeout 10s, retourne `{ok, detail}`.
+- `seed_db()` (`backend/db/database.py`) : Seed des données initiales — espaces IDÉES/CONCEPTION, 6 blocs démo, contenus, liaisons, config IA depuis .env. Ne s'exécute que si la base est vide.
 
 ---
 
@@ -379,10 +393,10 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 
 ## 8. AVANCEMENT — Où on en est
 
-**Étape actuelle :** 12 / 12
-**Dernière étape validée :** 12 — Configuration IA + écran de paramétrage
-**Prochaine étape :** Aucune — Développement terminé
-**Critère de fin :** Toutes les étapes du SEQUENCAGE.md sont complétées et validées.
+**Étape actuelle :** Remédiation complète
+**Dernière étape validée :** 12 + Remédiation (R1-R6)
+**Prochaine étape :** Validation visuelle par l'humain
+**Critère de fin :** Tous les critères de succès du PROMPT_REMEDIATION.md §5 sont vérifiés visuellement.
 **Dernier verdict contrôle :** OK (17/02/2026)
 **Cycles KO consécutifs :** 0
 

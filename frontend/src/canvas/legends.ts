@@ -1,5 +1,5 @@
 // Canvas2D — Légendes contextuelles
-// Affichage couleur/forme au moment de l'interaction uniquement
+// Affichage couleur/forme + signification croisée (matrice CENTRAL.md §5.4)
 // Disparition automatique
 
 import { THEME } from './theme'
@@ -24,6 +24,53 @@ const SHAPE_MEANINGS: Record<Forme, string> = {
   circle:       'Cœur / Centre · Certitude maximale',
 }
 
+// ─── Matrice Couleur × Forme (CENTRAL.md §5.4) ─────────
+
+const MATRIX: Record<Couleur, Record<Forme, string>> = {
+  green: {
+    cloud: 'Observation floue',
+    'rounded-rect': 'Fait établi',
+    square: 'Donnée de référence',
+    oval: 'Processus factuel',
+    circle: 'Pilier factuel',
+  },
+  orange: {
+    cloud: 'Malaise diffus',
+    'rounded-rect': 'Problème identifié',
+    square: 'Contrainte dure',
+    oval: 'Crise en cours',
+    circle: 'Tension centrale',
+  },
+  yellow: {
+    cloud: 'Intuition de solution',
+    'rounded-rect': 'Solution formulée',
+    square: 'Règle de résolution',
+    oval: 'Implémentation',
+    circle: 'Insight fondateur',
+  },
+  blue: {
+    cloud: 'Hypothèse logique',
+    'rounded-rect': 'Argument structuré',
+    square: 'Axiome',
+    oval: 'Raisonnement',
+    circle: 'Cadre logique central',
+  },
+  violet: {
+    cloud: 'Pressentiment de sens',
+    'rounded-rect': 'Valeur articulée',
+    square: 'Principe fondateur',
+    oval: 'Quête de sens',
+    circle: 'Conviction profonde',
+  },
+  mauve: {
+    cloud: 'Germe d\'idée',
+    'rounded-rect': 'Concept exploré',
+    square: 'Convention de travail',
+    oval: 'Exploration',
+    circle: 'Concept pivot',
+  },
+}
+
 // ─── État de la légende ─────────────────────────────────
 
 interface LegendState {
@@ -41,6 +88,7 @@ const LEGEND_FADE = 500       // ms de fade out
 const LEGEND_OFFSET_Y = -20   // décalage vertical au-dessus du bloc
 const LEGEND_PADDING = 8
 const LEGEND_FONT = '11px "Segoe UI", system-ui, sans-serif'
+const LEGEND_FONT_BOLD = 'bold 11px "Segoe UI", system-ui, sans-serif'
 const LEGEND_BG = 'rgba(10, 10, 20, 0.85)'
 const LEGEND_BORDER_RADIUS = 4
 
@@ -91,18 +139,22 @@ export class LegendManager {
 
     const colorText = COLOR_MEANINGS[this.state.couleur]
     const shapeText = SHAPE_MEANINGS[this.state.forme]
+    const matrixText = MATRIX[this.state.couleur]?.[this.state.forme] || ''
     const colors = THEME.colors[this.state.couleur]
     if (!colors || !colorText || !shapeText) return
 
     ctx.save()
     ctx.globalAlpha = this.state.opacity
 
+    // Mesurer les 3 lignes
+    ctx.font = LEGEND_FONT_BOLD
+    const line0Width = ctx.measureText(matrixText).width
     ctx.font = LEGEND_FONT
     const line1Width = ctx.measureText(colorText).width
     const line2Width = ctx.measureText(shapeText).width
-    const maxWidth = Math.max(line1Width, line2Width)
+    const maxWidth = Math.max(line0Width, line1Width, line2Width)
     const boxW = maxWidth + LEGEND_PADDING * 2
-    const boxH = 36 + LEGEND_PADDING * 2
+    const boxH = 54 + LEGEND_PADDING * 2  // 3 lignes
     const bx = this.state.x - boxW / 2
     const by = this.state.y - boxH
 
@@ -126,15 +178,22 @@ export class LegendManager {
     ctx.lineWidth = 1
     ctx.stroke()
 
-    // Texte ligne 1 — couleur
-    ctx.fillStyle = colors.glow
     ctx.textAlign = 'center'
     ctx.textBaseline = 'top'
-    ctx.fillText(colorText, this.state.x, by + LEGEND_PADDING)
 
-    // Texte ligne 2 — forme
-    ctx.fillStyle = 'rgba(180, 180, 190, 0.8)'
-    ctx.fillText(shapeText, this.state.x, by + LEGEND_PADDING + 18)
+    // Ligne 1 — signification croisée (matrice) en gras
+    ctx.font = LEGEND_FONT_BOLD
+    ctx.fillStyle = colors.glow
+    ctx.fillText(matrixText, this.state.x, by + LEGEND_PADDING)
+
+    // Ligne 2 — couleur
+    ctx.font = LEGEND_FONT
+    ctx.fillStyle = 'rgba(200, 200, 210, 0.7)'
+    ctx.fillText(colorText, this.state.x, by + LEGEND_PADDING + 18)
+
+    // Ligne 3 — forme
+    ctx.fillStyle = 'rgba(160, 160, 180, 0.6)'
+    ctx.fillText(shapeText, this.state.x, by + LEGEND_PADDING + 36)
 
     ctx.restore()
   }

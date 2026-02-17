@@ -3,7 +3,7 @@
 ## Informations
 
 Projet : Atelier Visuel de Pensée
-Total d'étapes : 12
+Total d'étapes : 12 + Remédiation
 Date de création : 17/02/2026
 
 ---
@@ -105,6 +105,75 @@ Date de création : 17/02/2026
 - Agents concernés : Les deux
 - Contrôle : Oui
 - Dépendances : Étape 11
+
+---
+
+## Phase Remédiation (post étape 12)
+
+### R1 — Seed données initiales + config IA depuis .env
+- Objectif : Créer espaces IDÉES/CONCEPTION, 6 blocs démo avec contenus et liaisons, config IA OpenRouter pré-remplie
+- Critère de fin : Au premier lancement, l'application affiche 2 espaces, 6 blocs colorés dans IDÉES, 4 liaisons, config IA avec anthropic/claude-opus-4.6
+- Fichiers : database.py, main.py, requirements.txt, .env.example
+- Statut : FAIT
+
+### R2 — Chargement .env + avertissement si absent
+- Objectif : Le backend charge .env au démarrage (python-dotenv). Si absent, avertissement clair, pas de crash.
+- Critère de fin : Backend démarre avec .env → clés chargées. Sans .env → warning dans les logs, backend fonctionnel.
+- Fichiers : main.py, requirements.txt
+- Statut : FAIT
+
+### R3 — Routeur IA corrigé pour OpenRouter
+- Objectif : Corriger endpoint API (pas de double /v1), ajouter headers HTTP-Referer/X-Title pour OpenRouter
+- Critère de fin : Appel API vers OpenRouter avec le bon endpoint /chat/completions
+- Fichiers : ia_routeur.py
+- Statut : FAIT
+
+### R4 — Légendes contextuelles matrice §5.4
+- Objectif : Afficher la signification croisée couleur×forme (matrice complète CENTRAL.md §5.4) en plus des significations individuelles
+- Critère de fin : Sélection d'un bloc vert nuage affiche "Observation floue", orange rounded-rect affiche "Problème identifié", etc.
+- Fichiers : legends.ts
+- Statut : FAIT
+
+### R5 — Heuristiques de liaisons dans l'IA Assistant
+- Objectif : Intégrer les règles R1-R5, A1-A5, C1-C5 de CENTRAL.md §5.5 dans le system prompt de l'assistant
+- Critère de fin : L'assistant peut détecter les patterns de flux, alertes, et complétude dans un espace
+- Fichiers : ia_assistant.py
+- Statut : FAIT
+
+### R6 — Modèle IA anthropic/claude-opus-4.6 partout
+- Objectif : Remplacer tout modèle IA par défaut par anthropic/claude-opus-4.6, seed config_ia au démarrage
+- Critère de fin : Config IA affiche anthropic/claude-opus-4.6, pas de modèle OpenAI en dur
+- Fichiers : database.py, ia_routeur.py
+- Statut : FAIT
+
+---
+
+## Matrice de couverture CENTRAL.md → Code
+
+| Section CENTRAL.md | Fonctionnalité | Étape | Statut |
+|---|---|---|---|
+| §1 Vision | Environnement cognitif spatial | Global | FAIT |
+| §2.1 Graphe spatial | Canvas2D moteur | 3 | FAIT |
+| §2.2 Modèle blocs | 5 formes × 6 couleurs | 3 | FAIT |
+| §2.3 Modèle liaisons | 4 types Bézier | 4 | FAIT |
+| §2.4 Espaces V1 | IDÉES + CONCEPTION | R1 | FAIT |
+| §2.5 Double représentation | Graphe + Liste sync | 10 | FAIT |
+| §2.6 Indexation auto | titre_ia, resume_ia | 2 | FAIT |
+| §3.2 Stack | React+Vite, FastAPI, SQLite | Init | FAIT |
+| §3.4 Canvas2D | Rendu isolé, thème ext. | 3-6 | FAIT |
+| §3.6 Config IA | Écran config, mode local/API | 12 | FAIT |
+| §3.7 Schéma SQLite | 5 tables + index | 1 | FAIT |
+| §3.8 API REST | CRUD complet | 1-2 | FAIT |
+| §4.2 Interface | TopBar, SidePanel, BottomBar | 7 | FAIT |
+| §4.4 Console IA | Panneau dialogue | 11 | FAIT |
+| §4.5 Vocal | [RÉSERVÉ] | — | — |
+| §4.6 Interaction blocs | Drag, zoom, sélection | 5 | FAIT |
+| §4.7 Redimensionnement | 8 directions | 5 | FAIT |
+| §5.2 Couleurs sémantiques | 6 couleurs | 3 | FAIT |
+| §5.3 Formes sémantiques | 5 formes | 3 | FAIT |
+| §5.4 Matrice couleur×forme | Légendes croisées | R4 | FAIT |
+| §5.5 Heuristiques liaisons | R1-R5, A1-A5, C1-C5 | R5 | FAIT |
+| §5.8 Protocole IA | Observer→Attendre | 11+R5 | FAIT |
 
 ---
 
