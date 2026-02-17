@@ -171,6 +171,8 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 - **Canvas2D thème** : tous les paramètres visuels externalisés dans theme.ts
 - **Canvas2D liaisons** : 4 types (simple, logique, tension, ancrée), Bézier cubiques avec tangence réelle, glow lumineux, couleurs sémantiques, liaisons ancrées toujours visibles
 - **Canvas2D interactions** : drag & drop blocs, pan (clic vide/milieu/droit), zoom molette progressif vers souris, sélection clic, curseur contextuel, hit-testing, création liaison par connecteur, redimensionnement 8 directions
+- **Canvas2D légendes** : légendes contextuelles couleur+forme au geste, fade automatique 2s+500ms, significations sémantiques conformes CENTRAL.md
+- **Bus d'événements** : `canvasBus` typé (select, open, move, resize, link), découplage Canvas/React total
 
 ### 4.2 Ce qui est fragile (à manipuler avec précaution)
 
@@ -350,10 +352,10 @@ Les logs ne sont là que pour toi, pendant ton développement. Un log ne reste d
 
 ## 8. AVANCEMENT — Où on en est
 
-**Étape actuelle :** 5 / 12
-**Dernière étape validée :** 5 — Canvas2D : interactions utilisateur
-**Prochaine étape :** 6 — Canvas2D : légendes contextuelles et bus d'événements
-**Critère de fin :** Les légendes apparaissent au geste et disparaissent automatiquement. Le bus émet et reçoit les événements clés. Le Canvas et React communiquent sans couplage direct.
+**Étape actuelle :** 6 / 12
+**Dernière étape validée :** 6 — Canvas2D : légendes contextuelles et bus d'événements
+**Prochaine étape :** 7 — Interface React : barres et panneaux
+**Critère de fin :** Les 4 zones UI visibles et positionnées. SidePanel se déploie. ConsoleIA translucide avec graphe visible. TopBar permet création/sélection d'espace.
 **Dernier verdict contrôle :** OK (17/02/2026)
 **Cycles KO consécutifs :** 0
 

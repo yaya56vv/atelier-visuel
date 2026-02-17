@@ -5,6 +5,8 @@ import { THEME } from './theme'
 import { drawBloc, type BlocVisuel, type LiaisonVisuelle } from './shapes'
 import { drawAllLiaisons } from './links'
 import { InteractionManager } from './interactions'
+import { LegendManager } from './legends'
+import { canvasBus } from './events'
 
 export interface EngineState {
   blocs: BlocVisuel[]
@@ -26,13 +28,49 @@ export class CanvasEngine {
     zoom: 1,
   }
   private interactions: InteractionManager
+  private legends: LegendManager
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas
     const ctx = canvas.getContext('2d')
     if (!ctx) throw new Error('Canvas 2D non supporté')
     this.ctx = ctx
+    this.legends = new LegendManager()
     this.interactions = new InteractionManager(this, canvas, ctx)
+    this.wireEvents()
+  }
+
+  /** Connecte les callbacks d'interaction au bus d'événements. */
+  private wireEvents() {
+    this.interactions.onBlocSelect = (blocId) => {
+      canvasBus.emit('bloc:select', { blocId })
+      // Afficher la légende du bloc sélectionné
+      if (blocId) {
+        const bloc = this.state.blocs.find(b => b.id === blocId)
+        if (bloc) {
+          this.legends.show(
+            bloc.x + bloc.w / 2,
+            bloc.y,
+            bloc.couleur,
+            bloc.forme,
+          )
+        }
+      } else {
+        this.legends.hide()
+      }
+    }
+
+    this.interactions.onBlocMove = (blocId, x, y) => {
+      canvasBus.emit('bloc:move', { blocId, x, y })
+    }
+
+    this.interactions.onBlocResize = (blocId, w, h) => {
+      canvasBus.emit('bloc:resize', { blocId, w, h })
+    }
+
+    this.interactions.onLiaisonCreate = (sourceId, cibleId) => {
+      canvasBus.emit('liaison:create', { sourceId, cibleId })
+    }
   }
 
   /** Met à jour la liste des blocs à afficher. */
@@ -64,6 +102,11 @@ export class CanvasEngine {
   /** Retourne le gestionnaire d'interactions. */
   getInteractions(): InteractionManager {
     return this.interactions
+  }
+
+  /** Retourne le bus d'événements. */
+  getBus() {
+    return canvasBus
   }
 
   /** Redimensionne le canvas au pixel ratio de l'écran. */
@@ -140,6 +183,9 @@ export class CanvasEngine {
       }
     }
 
+    // Rendu des légendes contextuelles
+    this.legends.draw(ctx)
+
     ctx.restore()
 
     this.animationId = requestAnimationFrame(this.render)
@@ -160,9 +206,10 @@ export class CanvasEngine {
     }
   }
 
-  /** Détruit le moteur et les interactions. */
+  /** Détruit le moteur, les interactions et le bus. */
   destroy() {
     this.stop()
     this.interactions.detach()
+    canvasBus.clear()
   }
 }
