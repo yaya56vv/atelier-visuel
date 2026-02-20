@@ -15,12 +15,14 @@ interface ConsoleIAProps {
   visible: boolean
   espaceId: string | null
   onClose?: () => void
+  onGrapheModified?: () => void
 }
 
-export default function ConsoleIA({ visible, espaceId, onClose }: ConsoleIAProps) {
+export default function ConsoleIA({ visible, espaceId, onClose, onGrapheModified }: ConsoleIAProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const abortRef = useRef<AbortController | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
   // Auto-scroll
@@ -43,25 +45,50 @@ export default function ConsoleIA({ visible, espaceId, onClose }: ConsoleIAProps
     setInput('')
     setLoading(true)
 
+    const controller = new AbortController()
+    abortRef.current = controller
+
     try {
       const response = await api.askIA(espaceId, text)
-      const aiMsg: Message = {
-        id: `a-${Date.now()}`,
-        role: 'assistant',
-        text: response,
+      if (!controller.signal.aborted) {
+        const aiMsg: Message = {
+          id: `a-${Date.now()}`,
+          role: 'assistant',
+          text: response,
+        }
+        setMessages(prev => [...prev, aiMsg])
+        // Si la réponse contient des actions effectuées, rafraîchir le graphe
+        if (response.includes('Actions effectuées') || response.includes('✓')) {
+          onGrapheModified?.()
+        }
       }
-      setMessages(prev => [...prev, aiMsg])
     } catch (err) {
-      const errorMsg: Message = {
-        id: `e-${Date.now()}`,
-        role: 'assistant',
-        text: 'Erreur de connexion avec le service IA.',
+      if (!controller.signal.aborted) {
+        const errorMsg: Message = {
+          id: `e-${Date.now()}`,
+          role: 'assistant',
+          text: 'Erreur de connexion avec le service IA.',
+        }
+        setMessages(prev => [...prev, errorMsg])
       }
-      setMessages(prev => [...prev, errorMsg])
     } finally {
+      abortRef.current = null
       setLoading(false)
     }
   }, [input, espaceId, loading])
+
+  const handleStop = useCallback(() => {
+    if (abortRef.current) {
+      abortRef.current.abort()
+      abortRef.current = null
+    }
+    setLoading(false)
+    setMessages(prev => [...prev, {
+      id: `s-${Date.now()}`,
+      role: 'assistant',
+      text: '(Interrompu)',
+    }])
+  }, [])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -118,16 +145,22 @@ export default function ConsoleIA({ visible, espaceId, onClose }: ConsoleIAProps
           rows={2}
           disabled={!espaceId || loading}
         />
-        <button
-          onClick={handleSend}
-          style={{
-            ...styles.sendBtn,
-            opacity: (!espaceId || loading || !input.trim()) ? 0.4 : 1,
-          }}
-          disabled={!espaceId || loading || !input.trim()}
-        >
-          {loading ? '...' : 'Envoyer'}
-        </button>
+        {loading ? (
+          <button onClick={handleStop} style={styles.stopBtn}>
+            Stop
+          </button>
+        ) : (
+          <button
+            onClick={handleSend}
+            style={{
+              ...styles.sendBtn,
+              opacity: (!espaceId || !input.trim()) ? 0.4 : 1,
+            }}
+            disabled={!espaceId || !input.trim()}
+          >
+            Envoyer
+          </button>
+        )}
       </div>
     </aside>
   )
@@ -244,6 +277,17 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 4,
     padding: '4px 10px',
     fontSize: 11,
+    cursor: 'pointer',
+    alignSelf: 'flex-end',
+  },
+  stopBtn: {
+    background: 'rgba(200, 60, 60, 0.3)',
+    color: 'rgba(255, 100, 100, 0.9)',
+    border: '1px solid rgba(255, 100, 100, 0.4)',
+    borderRadius: 4,
+    padding: '4px 10px',
+    fontSize: 11,
+    fontWeight: 600,
     cursor: 'pointer',
     alignSelf: 'flex-end',
   },

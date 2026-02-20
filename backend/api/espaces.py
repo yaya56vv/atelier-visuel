@@ -56,8 +56,40 @@ async def get_espace(espace_id: str):
         "SELECT * FROM liaisons WHERE espace_id = ? ORDER BY created_at", (espace_id,)
     )
 
+    # Récupérer les types de contenus par bloc (pour icônes indicatrices canvas)
+    import json as _json
+    contenus_types = await db.execute_fetchall(
+        "SELECT bloc_id, type, metadata FROM contenus_bloc WHERE bloc_id IN "
+        "(SELECT id FROM blocs WHERE espace_id = ?)",
+        (espace_id,),
+    )
+    # Grouper par bloc_id → liste de types distincts (avec detail_type si disponible)
+    types_par_bloc: dict[str, list[str]] = {}
+    for row in contenus_types:
+        bid = row["bloc_id"]
+        t = row["type"]
+        # Vérifier si un detail_type plus précis existe dans les metadata
+        if row["metadata"]:
+            try:
+                meta = _json.loads(row["metadata"])
+                if meta.get("detail_type"):
+                    t = meta["detail_type"]
+                elif meta.get("source") == "youtube_transcript":
+                    continue  # Ne pas afficher le texte extrait comme type séparé
+            except (ValueError, TypeError):
+                pass
+        if bid not in types_par_bloc:
+            types_par_bloc[bid] = []
+        if t not in types_par_bloc[bid]:
+            types_par_bloc[bid].append(t)
+
     espace = dict(rows[0])
-    espace["blocs"] = [dict(b) for b in blocs]
+    blocs_list = []
+    for b in blocs:
+        bd = dict(b)
+        bd["content_types"] = types_par_bloc.get(bd["id"], [])
+        blocs_list.append(bd)
+    espace["blocs"] = blocs_list
     espace["liaisons"] = [dict(li) for li in liaisons]
     return espace
 

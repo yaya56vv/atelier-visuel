@@ -919,9 +919,360 @@ Si une réponse est non → la fonctionnalité n'a pas sa place.
 
 ---
 
-## 8. JOURNAL DES MODIFICATIONS
+## 8. EXTENSION V2 — SYSTÈME D'EXPLOITATION PERSONNEL
+
+### 8.1 Vision élargie
+
+L'Atelier Visuel de Pensée n'est pas seulement un outil de pensée — il a vocation à devenir le **système d'exploitation personnel** de l'utilisateur. Le graphe vivant devient l'interface universelle où convergent : les fichiers du PC, les idées, les recherches, les projets, la documentation et le suivi système.
+
+Cette vision ne remplace pas l'architecture V1 — elle l'étend en activant les emplacements réservés et en ajoutant trois capacités nouvelles.
+
+### 8.2 Intégration du système de fichiers dans le graphe
+
+Les fichiers et dossiers du PC deviennent des blocs dans le graphe, navigables visuellement par **sens sémantique** plutôt que par arborescence Windows.
+
+**Principes :**
+
+- Un fichier indexé = un bloc avec métadonnées (type, taille, date, chemin réel, tags sémantiques)
+- Les dossiers peuvent être représentés comme des clusters ou des espaces dédiés
+- La navigation se fait par thématique, projet ou relation — pas par `C:\Users\...\`
+- Le chemin physique reste accessible mais n'est plus le mode de navigation principal
+- L'indexation est sélective : l'utilisateur choisit quels dossiers sont intégrés au graphe
+
+**Table supplémentaire :**
+
+```sql
+CREATE TABLE fichiers_indexes (
+    id TEXT PRIMARY KEY,
+    bloc_id TEXT REFERENCES blocs(id) ON DELETE SET NULL,
+    chemin_absolu TEXT NOT NULL UNIQUE,
+    nom TEXT NOT NULL,
+    extension TEXT,
+    taille_octets INTEGER,
+    hash_contenu TEXT,
+    date_modification DATETIME,
+    date_indexation DATETIME DEFAULT CURRENT_TIMESTAMP,
+    tags_semantiques TEXT,
+    statut TEXT CHECK(statut IN ('actif','modifie','supprime','deplace')) DEFAULT 'actif'
+);
+
+CREATE INDEX idx_fichiers_chemin ON fichiers_indexes(chemin_absolu);
+CREATE INDEX idx_fichiers_bloc ON fichiers_indexes(bloc_id);
+CREATE INDEX idx_fichiers_statut ON fichiers_indexes(statut);
+```
+
+### 8.3 Scan différentiel au démarrage
+
+À chaque ouverture de l'Atelier, le système compare l'état actuel du système de fichiers avec l'état enregistré dans `fichiers_indexes`.
+
+**Processus :**
+
+1. Parcours des dossiers indexés
+2. Comparaison hash/date de modification avec l'enregistrement
+3. Détection : nouveaux fichiers, fichiers modifiés, fichiers supprimés, fichiers déplacés
+4. Rapport de différences présenté à l'utilisateur dans l'interface
+5. Proposition de mise à jour du graphe (ajout/suppression/déplacement de blocs)
+6. Validation utilisateur avant toute modification du graphe
+
+**Contraintes :**
+
+- Pas de processus de surveillance continu (pas de watchdog permanent)
+- Le scan s'exécute au démarrage uniquement, puis sur demande explicite
+- Le scan est un processus CPU léger — pas de GPU requis
+- Temps cible : < 5 secondes pour 10 000 fichiers indexés
+
+**Endpoints réservés :**
+
+```
+POST /api/filesystem/scan-diff
+GET  /api/filesystem/rapport
+POST /api/filesystem/appliquer-changements
+```
+
+### 8.4 Agents d'action locale sur les fichiers
+
+Des agents IA légers (via Ollama, modèles 7B-13B) peuvent proposer et exécuter des actions sur le système de fichiers après validation.
+
+**Capacités :**
+
+- Proposer du rangement par thématique (regrouper des fichiers éparpillés)
+- Détecter les doublons et proposer la fusion
+- Identifier les fichiers volumineux inutiles
+- Renommer selon une convention cohérente
+- Déplacer des fichiers entre dossiers
+
+**Principes de sécurité :**
+
+- **Aucune action destructive sans validation explicite** (suppression, écrasement)
+- Les déplacements sont proposés avec prévisualisation avant/après
+- Un journal d'actions est maintenu pour réversibilité
+- L'agent est chargé à la demande et déchargé après usage (non-blocage GPU)
+
+**Table de journal :**
+
+```sql
+CREATE TABLE journal_actions_fichiers (
+    id TEXT PRIMARY KEY,
+    type_action TEXT NOT NULL CHECK(type_action IN ('deplacer','renommer','fusionner','supprimer','creer_dossier')),
+    chemin_source TEXT NOT NULL,
+    chemin_destination TEXT,
+    date_action DATETIME DEFAULT CURRENT_TIMESTAMP,
+    valide_par_utilisateur BOOLEAN DEFAULT FALSE,
+    reversible BOOLEAN DEFAULT TRUE,
+    statut TEXT CHECK(statut IN ('propose','valide','execute','annule')) DEFAULT 'propose'
+);
+```
+
+### 8.5 Architecture multi-cerveaux discontinue
+
+Le système utilise plusieurs intelligences spécialisées, aucune ne tournant en permanence :
+
+| Cerveau | Technologie | Usage | Ressource | Mode |
+|---------|-------------|-------|-----------|------|
+| STT | Whisper large-v3 | Dictée vocale | GPU local | À la demande |
+| TTS | Edge TTS ou Piper | Retour vocal | Cloud ou local | À la demande |
+| IA Graphe | Ollama (7B) | Titres, résumés, entités | GPU local | À la demande |
+| IA Assistant | API Claude/GPT | Dialogue, analyse profonde | Cloud | À la demande |
+| Agent fichiers | Ollama (7B-13B) | Classification, rangement | GPU local | À la demande |
+| Scan diff | Python natif | Détection changements | CPU | Au démarrage |
+
+**Principe de non-blocage** : les agents GPU sont chargés/déchargés dynamiquement. Jamais deux agents lourds simultanément sur le même GPU. L'orchestrateur (backend FastAPI) gère la file d'attente.
+
+### 8.6 Suivi des performances système
+
+Une vue dédiée dans l'Atelier affiche l'état de santé de la machine :
+
+- Espace disque par volume
+- Utilisation mémoire RAM et VRAM
+- Processus gourmands
+- Températures GPU/CPU
+
+Ce n'est pas un monitoring continu mais un **tableau de bord consultable**, mis à jour au démarrage et sur demande.
+
+**Endpoints réservés :**
+
+```
+GET /api/systeme/sante
+GET /api/systeme/gpu
+GET /api/systeme/disques
+```
+
+### 8.7 Espaces de recherche dédiés
+
+Chaque recherche entreprise (technique, créative, spirituelle, professionnelle) peut avoir son propre espace dans le graphe — un réceptacle vivant qui accumule résultats, notes, liens et conclusions au fil du temps.
+
+**Workflow :**
+
+1. L'utilisateur crée un espace de recherche (thème, objectif)
+2. Les résultats de recherche (web, documents, notes) sont importés comme blocs
+3. L'IA propose une structuration initiale du graphe de recherche
+4. L'espace grandit organiquement à chaque session
+5. L'IA détecte les patterns, les manques, les convergences
+
+### 8.8 Relation avec la documentation existante
+
+| Document | Public | Rôle |
+|----------|--------|------|
+| **Documents A-E, G0** (docs-creation/) | IA d'implémentation | Détail technique exhaustif par domaine |
+| **CENTRAL.md** | IA (lecture rapide) | Synthèse complète — référence de vérité |
+| **Vision_Architecture.docx** | Humain | Synthèse stratégique — direction et sens du projet |
+| **AGENT.md** | IA d'implémentation | Protocole d'exécution des agents de développement |
+| **SEQUENCAGE.md** | IA d'implémentation | Ordre de construction des fonctionnalités |
+
+> Les documents ne se dupliquent pas — ils se complètent. Chaque niveau de lecture a son document dédié.
+
+### 8.9 Emplacements réservés V2
+
+| Fonctionnalité | Frontend | Backend | Statut |
+|---------------|----------|---------|--------|
+| Scan différentiel | `src/modules/filesystem/` | `services/scan_diff.py` | [RÉSERVÉ] |
+| Agent fichiers | `src/modules/filesystem/` | `services/agent_fichiers.py` | [RÉSERVÉ] |
+| Tableau de bord système | `src/modules/systeme/` | `services/sante_systeme.py` | [RÉSERVÉ] |
+| Espaces de recherche | Intégré espaces existants | `services/recherche_espace.py` | [RÉSERVÉ] |
+
+### 8.10 Structure de fichiers étendue
+
+```
+atelier-visuel/
+├── ...existant...
+├── frontend/
+│   └── src/
+│       └── modules/
+│           ├── vocal/           ← [RÉSERVÉ V1]
+│           ├── import/          ← [RÉSERVÉ V1]
+│           ├── recherche/       ← [RÉSERVÉ V1]
+│           ├── meta/            ← [RÉSERVÉ V1]
+│           ├── filesystem/      ← [RÉSERVÉ V2] Navigateur fichiers, scan diff
+│           └── systeme/         ← [RÉSERVÉ V2] Tableau de bord performance
+├── backend/
+│   └── services/
+│       ├── ...existant...
+│       ├── scan_diff.py         ← [RÉSERVÉ V2]
+│       ├── agent_fichiers.py    ← [RÉSERVÉ V2]
+│       ├── sante_systeme.py     ← [RÉSERVÉ V2]
+│       └── recherche_espace.py  ← [RÉSERVÉ V2]
+└── docs-creation/
+    ├── ...existant A-E, G0...
+    └── DOCUMENT_F_VISION_ELARGIE.md  ← [À CRÉER] Extension V2
+```
+
+---
+
+## 9. PHILOSOPHIE D'INTÉGRATION — FUSION ARCHITECTURALE
+
+### 9.1 Principe fondateur : fusionner, ne pas recréer
+
+L'Atelier ne réinvente pas ce qui existe. Il absorbe les **principes architecturaux éprouvés** des meilleurs outils du marché et les fond dans un tout cohérent où les coutures sont invisibles.
+
+Ce qui est emprunté, ce ne sont pas des interfaces ni du code, mais des **choix de conception** :
+
+| Source d'inspiration | Principe emprunté | Ce qu'on en tire |
+|---------------------|-------------------|------------------|
+| **Obsidian** | Stockage local-first en Markdown, liens bidirectionnels | Persistance légère, souveraineté des données, interopérabilité |
+| **Heptabase** | Spatialisation visuelle sur canvas infini | Organisation par proximité spatiale, pensée non-linéaire |
+| **Kosmik** | Intégration multimédia native, navigateur embarqué, auto-tagging IA | Recherche et capture sans changer d'outil |
+| **TheBrain** | Graphe de connaissances navigable sur le long terme | Persistance décennale, navigation par association |
+| **Claude (API)** | Analyse sémantique profonde, co-création | Couche d'intelligence supérieure à la demande |
+| **Claude Desktop (MCP)** | Accès système de fichiers, PowerShell, navigation web | Bras et jambes pour agir sur l'environnement |
+| **Claude Code** | Skills, hooks, agents multi-agentiques, développement | Moteur de développement intégré, boucles de code |
+| **Ollama** | LLM locaux légers à la demande | Maintenance, indexation, classification sans coût API |
+
+### 9.2 Vigilances
+
+- **Propriétaire** : Heptabase, Kosmik, TheBrain sont propriétaires. On étudie les principes, pas le code.
+- **Dette technique héritée** : Ces outils datent d'une époque antérieure aux LLM, MCP et agents locaux. Les principes sont bons, l'implémentation doit être actuelle.
+- **Haute couture** : L'intégration doit être élégante — pas de modules juxtaposés qui sentent le bricolage. Un seul flux, une seule interface, zéro couture visible.
+- **Simplicité d'accueil** : Contrairement à Obsidian (courbe d'apprentissage sévère), l'Atelier doit être immédiatement utilisable. La complexité est derrière, jamais devant.
+
+### 9.3 Ce que l'Atelier apporte d'unique (introuvable ailleurs)
+
+1. **Grammaire sémantique visuelle** — 6 couleurs × 5 formes encodant intention et certitude. Rend visible la nature de la pensée, pas juste son contenu.
+2. **Intégration du filesystem local dans le graphe** — Fichiers réels comme nœuds navigables par sens, pas par arborescence.
+3. **Architecture multi-cerveaux discontinue** — Orchestration LLM local + API cloud + Whisper avec non-blocage GPU.
+4. **Scan différentiel** — L'outil s'éveille, rattrape les changements, se rendort. Paradigme unique.
+5. **Co-création en temps réel avec structuration visuelle** — La conversation avec l'IA produit directement des blocs connectés dans le graphe.
+6. **Stockage énergétique** — Pas de l'archivage mort mais un stockage vivant où organiser = penser.
+
+### 9.4 Rôle de l'environnement Claude comme levier
+
+L'environnement Claude existant n'est pas extérieur au projet — il en est un pilier :
+
+- **Claude.ai + MCP (Desktop Commander, Filesystem, TTS, STT)** : prototype vivant de ce que l'Atelier fera. Déjà capable de manipuler fichiers, lancer des processus, parler en voix.
+- **Claude Code CLI** : moteur de développement avec skills, hooks, slash commands, agents multi-agentiques. C'est par là que le code de l'Atelier sera implémenté.
+- **Claude API** : cerveau consultant appelé depuis l'Atelier pour l'analyse sémantique profonde, la co-création, l'émergence. Arrive sans MCP — l'Atelier lui fournit les bras.
+
+**Distinction critique** : Claude Desktop (avec MCP) peut agir sur le système. Claude API (sans MCP) est intelligence pure. L'Atelier doit être conçu pour tirer le meilleur de chacun.
+
+---
+
+## 10. CHRONOLOGIE DE RÉALISATION — INTÉGRATION PROGRESSIVE
+
+### 10.1 Principe : l'outil se construit avec lui-même
+
+Chaque module ajouté rend le développement du suivant plus puissant. L'Atelier est à la fois le produit et l'outil de production. C'est une boucle vertueuse :
+
+1. On co-crée dans l'Atelier (graphe vivant, idées, architecture)
+2. On implémente via Claude Code (skills, agents, code)
+3. Le résultat enrichit l'Atelier lui-même
+4. L'Atelier enrichi permet une meilleure co-création du module suivant
+
+### 10.2 Séquence d'intégration
+
+**Étape 0 — Noyau fonctionnel minimal (en cours)**
+
+Objectif : un Atelier utilisable pour co-créer la suite.
+
+- Interface Canvas2D avec blocs, formes, couleurs, liaisons
+- Backend FastAPI + SQLite
+- Grammaire sémantique opérationnelle
+- Sauvegarde/chargement d'espaces
+- STT Whisper + TTS Edge (déjà actifs via MCP)
+
+Résultat : on peut poser des idées, les relier, les voir. L'Atelier devient l'outil de travail pour le reste du développement.
+
+**Étape 1 — Bloc-notes spatial et capture rapide**
+
+Inspiration : Obsidian (capture légère), Heptabase (spatialisation)
+
+- Création rapide de blocs par clic, voix ou raccourci
+- Édition de contenu riche dans les blocs
+- Recherche sémantique dans la base
+- Vue liste synchronisée avec le graphe
+
+Résultat : l'Atelier remplace le bloc-notes. Chaque idée de développement est capturée dedans.
+
+**Étape 2 — Co-création IA intégrée**
+
+Inspiration : Heptabase AI Chat, Kosmik auto-tagging
+
+- Console IA intégrée (Claude API) pour dialogue et analyse
+- Génération automatique de métadonnées (titres, résumés, entités)
+- Suggestions de liaisons par analyse sémantique
+- Les réponses IA peuvent créer des blocs directement dans le graphe
+
+Résultat : la co-création se fait dans l'Atelier. Ce qu'on fait en conversation Claude.ai se fait désormais dans le graphe vivant.
+
+**Étape 3 — Intégration recherche et import**
+
+Inspiration : Kosmik (navigateur intégré), Heptabase Web Tab
+
+- Recherche web depuis l'Atelier avec résultats importés comme blocs
+- Espaces de recherche dédiés (réceptacles vivants)
+- Import de documents (PDF, URL, notes) avec métadonnées
+- Traçabilité des sources
+
+Résultat : les recherches ne se perdent plus. Chaque investigation a son espace vivant.
+
+**Étape 4 — Intégration filesystem et scan différentiel**
+
+Inspiration : aucun outil existant (concept original)
+
+- Indexation sélective de dossiers du PC dans le graphe
+- Scan différentiel au démarrage
+- Navigation par sens plutôt que par arborescence
+- Agents Ollama locaux pour classification et rangement
+
+Résultat : l'Atelier connaît le PC. Les fichiers sont des blocs vivants.
+
+**Étape 5 — Tableau de bord système et maintenance**
+
+- Vue santé de la machine (disque, RAM, GPU, températures)
+- Propositions de nettoyage et d'optimisation
+- Journal d'actions réversibles
+
+Résultat : l'Atelier est le système d'exploitation personnel complet.
+
+**Étape 6 (horizon) — Actions vers l'extérieur**
+
+- Actions déclenchées depuis le graphe (création de projets, communication, automatisation)
+- Intégration avec des services externes
+- Méta-graphe inter-espaces
+
+Résultat : l'Atelier ne regarde plus seulement vers l'intérieur mais agit vers l'extérieur.
+
+### 10.3 Boucle de développement
+
+Chaque étape suit le même cycle :
+
+```
+Co-création (Atelier + Claude API)
+    ↓
+Conception (graphe vivant des idées)
+    ↓
+Implémentation (Claude Code CLI + agents)
+    ↓
+Intégration (le module rejoint l'Atelier)
+    ↓
+L'Atelier est plus puissant → retour étape suivante
+```
+
+---
+
+## 11. JOURNAL DES MODIFICATIONS
 
 - 17/02/2026 : Version initiale — Fusion des documents A, B, C, D, E, G0
+- 18/02/2026 : Ajout section 8 — Extension V2 (système d'exploitation personnel, scan différentiel, agents fichiers, multi-cerveaux, espaces de recherche)
+- 18/02/2026 : Ajout sections 9 et 10 — Philosophie d'intégration (fusion architecturale, haute couture, sources d'inspiration, rôle de l'environnement Claude) et chronologie de réalisation par intégration progressive avec boucle vertueuse.
 
 ---
 

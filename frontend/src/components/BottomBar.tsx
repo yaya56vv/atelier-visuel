@@ -1,4 +1,5 @@
-// Barre inférieure — Enregistrer, recentrer, zoom, IA observatrice, stop
+// Barre inférieure — Enregistrer, recentrer, zoom, IA, réorganiser, stop
+// Commandes globales de navigation — les filtres/liaisons sont dans l'explorateur (SidePanel)
 
 interface BottomBarProps {
   onSave?: () => void
@@ -7,6 +8,7 @@ interface BottomBarProps {
   onZoomOut?: () => void
   onToggleIA?: () => void
   onConfigIA?: () => void
+  onReorganiser?: () => void
   onStop?: () => void
   iaActive?: boolean
 }
@@ -18,6 +20,7 @@ export default function BottomBar({
   onZoomOut,
   onToggleIA,
   onConfigIA,
+  onReorganiser,
   onStop,
   iaActive = false,
 }: BottomBarProps) {
@@ -50,6 +53,9 @@ export default function BottomBar({
         </button>
         <button onClick={onConfigIA} style={styles.btn} title="Configuration IA">
           Config
+        </button>
+        <button onClick={onReorganiser} style={styles.btnReorg} title="Réorganiser le graphe (force-directed)">
+          ⚡
         </button>
         <span style={styles.sep} />
         <button onClick={onStop} style={styles.btnStop} title="Arrêter">
@@ -103,6 +109,15 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  btnReorg: {
+    background: 'rgba(40, 60, 120, 0.3)',
+    color: 'rgba(120, 180, 255, 0.9)',
+    border: '1px solid rgba(120, 180, 255, 0.2)',
+    borderRadius: 3,
+    padding: '3px 8px',
+    fontSize: 13,
+    cursor: 'pointer',
   },
   btnStop: {
     background: 'rgba(120, 40, 40, 0.3)',

@@ -1,6 +1,7 @@
 """API — Gestion des blocs et contenus (CRUD)."""
 
 import uuid
+import json
 from datetime import datetime, timezone
 from typing import Literal
 
@@ -49,7 +50,6 @@ class ContenuCreate(BaseModel):
 async def create_bloc(data: BlocCreate):
     db = await get_db()
 
-    # Vérifier que l'espace existe
     rows = await db.execute_fetchall("SELECT id FROM espaces WHERE id = ?", (data.espace_id,))
     if not rows:
         raise HTTPException(status_code=404, detail="Espace non trouvé")
@@ -124,7 +124,7 @@ async def delete_bloc(bloc_id: str):
     await db.commit()
 
 
-# --- Contenus de bloc ---
+# ─── Contenus de bloc ─────────────────────────────────────
 
 @router.post("/{bloc_id}/contenus", status_code=201)
 async def add_contenu(bloc_id: str, data: ContenuCreate):

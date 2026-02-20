@@ -174,7 +174,7 @@ export class LegendManager {
     ctx.fill()
 
     // Bordure fine couleur sémantique
-    ctx.strokeStyle = colors.glow
+    ctx.strokeStyle = `rgba(${colors.rgb}, 0.5)`
     ctx.lineWidth = 1
     ctx.stroke()
 
@@ -183,7 +183,7 @@ export class LegendManager {
 
     // Ligne 1 — signification croisée (matrice) en gras
     ctx.font = LEGEND_FONT_BOLD
-    ctx.fillStyle = colors.glow
+    ctx.fillStyle = `rgba(${colors.rgb}, 0.9)`
     ctx.fillText(matrixText, this.state.x, by + LEGEND_PADDING)
 
     // Ligne 2 — couleur

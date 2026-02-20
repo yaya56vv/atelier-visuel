@@ -9,3 +9,5 @@ data/*.sqlite
 *.egg-info/
 .mypy_cache/
 .pytest_cache/
+venv/
+.env/

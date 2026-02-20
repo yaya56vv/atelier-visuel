@@ -11,6 +11,9 @@ export interface CanvasEvents {
   'bloc:resize': { blocId: string; w: number; h: number }
   'liaison:create': { sourceId: string; cibleId: string }
   'liaison:delete': { liaisonId: string }
+  'liaison:recolor': { liaisonId: string; couleur: string }
+  'bloc:changeForme': { blocId: string; forme: string }
+  'bloc:changeCouleur': { blocId: string; couleur: string }
   'canvas:zoom': { zoom: number }
   'canvas:pan': { offsetX: number; offsetY: number }
 }

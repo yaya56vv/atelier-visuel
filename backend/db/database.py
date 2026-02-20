@@ -30,6 +30,34 @@ async def init_db() -> None:
     await _db.executescript(schema)
     await _db.commit()
 
+    # Migration : ajouter les colonnes enrichies si absentes (3A)
+    await _migrate_contenus_bloc()
+
+
+async def _migrate_contenus_bloc() -> None:
+    """Ajoute les colonnes de métadonnées enrichies à contenus_bloc si absentes."""
+    db = await get_db()
+    # Récupérer les colonnes existantes
+    cursor = await db.execute("PRAGMA table_info(contenus_bloc)")
+    existing = {row[1] for row in await cursor.fetchall()}
+
+    migrations = [
+        ("hash_contenu", "ALTER TABLE contenus_bloc ADD COLUMN hash_contenu TEXT"),
+        ("taille", "ALTER TABLE contenus_bloc ADD COLUMN taille INTEGER"),
+        ("mime_type", "ALTER TABLE contenus_bloc ADD COLUMN mime_type TEXT"),
+        ("chemin_fichier", "ALTER TABLE contenus_bloc ADD COLUMN chemin_fichier TEXT"),
+        ("origine", "ALTER TABLE contenus_bloc ADD COLUMN origine TEXT DEFAULT 'user'"),
+        ("extraction_auto", "ALTER TABLE contenus_bloc ADD COLUMN extraction_auto INTEGER DEFAULT 0"),
+        ("id_parent", "ALTER TABLE contenus_bloc ADD COLUMN id_parent TEXT REFERENCES contenus_bloc(id) ON DELETE SET NULL"),
+    ]
+
+    for col_name, sql in migrations:
+        if col_name not in existing:
+            await db.execute(sql)
+            print(f"[Migration] Ajout colonne contenus_bloc.{col_name}")
+
+    await db.commit()
+
 
 async def close_db() -> None:
     global _db

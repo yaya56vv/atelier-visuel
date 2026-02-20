@@ -81,16 +81,17 @@ export default function BlocEditor({ blocId, onClose }: BlocEditorProps) {
       return
     }
 
-    // Fichiers
+    // Fichiers — upload réel via l'API
     for (const file of Array.from(e.dataTransfer.files)) {
-      const type = file.type.startsWith('image/') ? 'image' : 'fichier'
-      const created = await api.addContenu(blocId, {
-        type,
-        contenu: file.name,
-        metadata: JSON.stringify({ size: file.size, type: file.type }),
-        ordre: contenus.length,
-      })
-      setContenus(prev => [...prev, created])
+      try {
+        await api.uploadFileToBloc(blocId, file)
+        // Recharger les contenus pour voir le fichier et le texte extrait
+        const data = await api.getBloc(blocId)
+        setContenus(data.contenus || [])
+        setTitre(data.titre_ia || data.titre || titre)
+      } catch (err) {
+        console.error('[BlocEditor] Erreur upload:', err)
+      }
     }
   }, [blocId, contenus.length])
 
@@ -151,23 +152,95 @@ export default function BlocEditor({ blocId, onClose }: BlocEditorProps) {
                   Aucun contenu. Ajoutez du texte, collez ou glissez un fichier.
                 </div>
               )}
-              {contenus.map(c => (
-                <div key={c.id} style={styles.contenuItem}>
-                  <span style={styles.contenuType}>
-                    {TYPE_LABELS[c.type] || c.type}
-                  </span>
-                  <span style={styles.contenuText}>
-                    {c.contenu ? (c.contenu.length > 100 ? c.contenu.slice(0, 100) + '...' : c.contenu) : '(vide)'}
-                  </span>
-                  <button
-                    onClick={() => handleDelete(c.id)}
-                    style={styles.deleteBtn}
-                    title="Supprimer"
-                  >
-                    x
-                  </button>
-                </div>
-              ))}
+              {contenus.map(c => {
+                // Extraire le nom original depuis metadata si c'est un fichier
+                const isFile = ['pdf', 'image', 'fichier', 'video_ref'].includes(c.type)
+                let displayName = c.contenu || '(vide)'
+                let fileUrl: string | null = null
+                let isImage = false
+                let isExtracted = false
+                if (isFile && c.metadata) {
+                  try {
+                    const meta = JSON.parse(c.metadata)
+                    if (meta.original_filename) displayName = meta.original_filename
+                    if (meta.stored_path) fileUrl = api.getUploadUrl(meta.stored_path)
+                  } catch {}
+                }
+                // Détecter texte extrait automatiquement (metadata.extracted = true)
+                if (!isFile && c.metadata) {
+                  try {
+                    const meta = JSON.parse(c.metadata)
+                    if (meta.extracted) isExtracted = true
+                  } catch {}
+                }
+                isImage = c.type === 'image' && !!fileUrl
+
+                // Tronquer le texte extrait par IA (afficher début)
+                const isText = !isFile
+                if (isText && isExtracted) {
+                  // Texte extrait — affichage réduit
+                  if (displayName.length > 200) displayName = displayName.slice(0, 200) + '...'
+                } else if (isText && displayName.length > 100) {
+                  displayName = displayName.slice(0, 100) + '...'
+                }
+
+                // Icônes par type
+                const typeIcons: Record<string, string> = { pdf: '📄', image: '🖼️', fichier: '📎', video_ref: '🎬', texte: '', note: '📝', url: '🔗', citation: '💬' }
+                const icon = typeIcons[c.type] || ''
+
+                return (
+                  <div key={c.id} style={styles.contenuItem}>
+                    <span style={styles.contenuType}>
+                      {icon} {(TYPE_LABELS[c.type] || c.type).toUpperCase()}
+                    </span>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {/* Miniature pour les images */}
+                      {isImage && fileUrl && (
+                        <a href={fileUrl} target="_blank" rel="noopener noreferrer">
+                          <img
+                            src={fileUrl}
+                            alt={displayName}
+                            style={{
+                              maxWidth: '100%',
+                              maxHeight: 120,
+                              borderRadius: 4,
+                              objectFit: 'contain',
+                              cursor: 'pointer',
+                              border: '1px solid rgba(80, 80, 120, 0.2)',
+                            }}
+                          />
+                        </a>
+                      )}
+                      {/* Nom du fichier ou texte */}
+                      {isFile && fileUrl ? (
+                        <a
+                          href={fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ ...styles.contenuText, color: 'rgba(100, 180, 255, 0.9)', textDecoration: 'underline', cursor: 'pointer' }}
+                          title={`Ouvrir ${displayName}`}
+                        >
+                          {displayName}
+                        </a>
+                      ) : (
+                        <span style={{
+                          ...styles.contenuText,
+                          ...(isExtracted ? { color: 'rgba(160, 160, 180, 0.6)', fontSize: 11, fontStyle: 'italic' } : {}),
+                        }}>
+                          {isExtracted ? `ℹ️ Extrait : ${displayName}` : displayName}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleDelete(c.id)}
+                      style={styles.deleteBtn}
+                      title="Supprimer"
+                    >
+                      x
+                    </button>
+                  </div>
+                )
+              })}
             </div>
 
             {/* Zone d'ajout */}

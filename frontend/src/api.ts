@@ -63,6 +63,7 @@ export interface BlocAPI {
   resume_ia: string | null
   entites: string | null
   mots_cles: string | null
+  content_types?: string[]  // types de contenus (pdf, image, etc.) pour icônes canvas
   created_at: string
   updated_at: string
 }
@@ -159,6 +160,88 @@ export async function deleteContenu(blocId: string, contenuId: string): Promise<
   return request(`/blocs/${blocId}/contenus/${contenuId}`, { method: 'DELETE' })
 }
 
+// --- Upload de fichiers ---
+
+export interface UploadResult {
+  contenu_id: string
+  type: string
+  filename: string
+  file_path: string
+  size_bytes: number
+  extracted_text_length: number
+  text_contenu_id?: string
+}
+
+export interface UploadNewBlocResult {
+  bloc: BlocAPI
+  contenu_id: string
+  type: string
+  filename: string
+  file_path: string
+  extracted_text_length: number
+}
+
+/** Upload un fichier dans un bloc existant. */
+export async function uploadFileToBloc(blocId: string, file: File): Promise<UploadResult> {
+  const formData = new FormData()
+  formData.append('file', file)
+  const res = await fetch(`${BASE}/upload/${blocId}`, {
+    method: 'POST',
+    body: formData,
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }))
+    throw new Error(err.detail || res.statusText)
+  }
+  return res.json()
+}
+
+/** Upload un fichier en créant un nouveau bloc. */
+export async function uploadFileNewBloc(
+  file: File, espaceId: string, x: number, y: number
+): Promise<UploadNewBlocResult> {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('espace_id', espaceId)
+  formData.append('x', x.toString())
+  formData.append('y', y.toString())
+  const res = await fetch(`${BASE}/upload/new-bloc`, {
+    method: 'POST',
+    body: formData,
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }))
+    throw new Error(err.detail || res.statusText)
+  }
+  return res.json()
+}
+
+/** URL pour accéder à un fichier uploadé. */
+export function getUploadUrl(storedPath: string): string {
+  return `${BASE}/upload/file/${storedPath}`
+}
+
+/** Import d'une vidéo YouTube (transcription + stockage). */
+export async function importYouTube(data: {
+  url: string
+  espace_id: string
+  x: number
+  y: number
+  bloc_id?: string
+}): Promise<{
+  bloc: BlocAPI
+  video_id: string
+  title: string | null
+  transcript_stored: boolean
+  transcript_error: string | null
+  created_new_bloc: boolean
+}> {
+  return request('/upload/youtube', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
 // ─── Configuration IA ────────────────────────────────────
 
 export interface ConfigIAAPI {
@@ -202,4 +285,12 @@ export async function askIA(espaceId: string, question: string): Promise<string>
     body: JSON.stringify({ espace_id: espaceId, question }),
   })
   return data.response
+}
+
+export async function reorganiserGraphe(espaceId: string): Promise<string> {
+  const data = await request<{ result: string }>('/ia/reorganiser', {
+    method: 'POST',
+    body: JSON.stringify({ espace_id: espaceId }),
+  })
+  return data.result
 }

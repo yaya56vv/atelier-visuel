@@ -32,6 +32,14 @@ CREATE TABLE IF NOT EXISTS contenus_bloc (
     contenu TEXT,
     metadata TEXT,
     ordre INTEGER DEFAULT 0,
+    -- Métadonnées enrichies (3A)
+    hash_contenu TEXT,               -- SHA-256 du fichier (dédoublonnage)
+    taille INTEGER,                  -- Taille en octets
+    mime_type TEXT,                   -- Type MIME réel (application/pdf, image/png...)
+    chemin_fichier TEXT,              -- Chemin relatif dans uploads/
+    origine TEXT DEFAULT 'user' CHECK(origine IN ('user','ia','extraction')),
+    extraction_auto INTEGER DEFAULT 0, -- 1 si généré par extraction automatique
+    id_parent TEXT REFERENCES contenus_bloc(id) ON DELETE SET NULL,  -- Lien vers le contenu source
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
