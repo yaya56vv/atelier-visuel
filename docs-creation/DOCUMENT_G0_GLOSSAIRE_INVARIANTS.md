@@ -186,30 +186,48 @@ Formes stables :
 - Ovale : processus
 - Cercle : cœur
 
-## 8. Invariants de V1
+## 8. Invariants architecturaux
 
-Les caractéristiques suivantes ne seront pas modifiées dans la version initiale :
+Les caractéristiques suivantes sont des invariants permanents :
 
 - Pas de fusion destructive automatique.
-- Pas de pondération algorithmique complexe.
 - Pas de hiérarchie arborescente.
-- Pas de surcharge sémantique sur les liaisons.
 - Pas de personnalisation avancée des grilles.
+- Pas de duplication logique des liaisons entre tables différentes.
+
+> Note : la pondération est désormais présente via le champ `poids` des liaisons (0.0–1.0), nécessaire au graphe global. Le poids reste indicatif.
+
+---
+
+## 9. Termes ajoutés V2 (graphe global)
+
+| Terme | Définition |
+|-------|------------|
+| **Graphe global** | Vue où tous les blocs de tous les espaces coexistent spatialement |
+| **Liaison inter-espace** | Liaison entre deux blocs appartenant à des espaces différents (propriété dérivée) |
+| **Poids** | Force d’une liaison (0.0 à 1.0), détermine proximité visuelle et seuil de filtrage |
+| **Origine** | Qui a créé la liaison : `manuel`, `auto`, `ia_suggestion` |
+| **Validation** | Statut d’une liaison : `valide`, `en_attente`, `rejete` |
+| **Couleur d’identité** | Teinte désaturée propre à chaque espace, distincte de la palette sémantique |
+| **x_global, y_global** | Coordonnées d’un bloc dans le graphe global (indépendantes de x, y) |
+| **Scan différentiel** | Analyse comparative filesystem ↔ index, détectant nouveaux/modifiés/supprimés/déplacés |
+| **Dossier surveillé** | Dossier du PC intégré au graphe via scan différentiel |
 
 ---
 
 ## Auto-évaluation de complétude
 
-Toutes les décisions structurantes V1 sont intégrées :
+Toutes les décisions structurantes sont intégrées :
 
 ✔ voix
 ✔ bloc conteneur
 ✔ métadonnées
 ✔ graphe hybride
-✔ liaisons simplifiées
-✔ deux espaces
+✔ liaisons unifiées (11 types, poids, validation)
+✔ espaces + graphe global
 ✔ palette stable
 ✔ UX invariants
 ✔ IA duale
+✔ filesystem intégré
 
 Aucune zone floue restante.

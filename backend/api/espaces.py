@@ -19,6 +19,7 @@ class EspaceCreate(BaseModel):
 class EspaceUpdate(BaseModel):
     nom: str | None = None
     theme: str | None = None
+    couleur_identite: str | None = None
 
 
 @router.get("/")
@@ -53,7 +54,15 @@ async def get_espace(espace_id: str):
         "SELECT * FROM blocs WHERE espace_id = ? ORDER BY created_at", (espace_id,)
     )
     liaisons = await db.execute_fetchall(
-        "SELECT * FROM liaisons WHERE espace_id = ? ORDER BY created_at", (espace_id,)
+        """SELECT l.*,
+                  bs.espace_id AS espace_source,
+                  bc.espace_id AS espace_cible
+           FROM liaisons l
+           JOIN blocs bs ON l.bloc_source_id = bs.id
+           JOIN blocs bc ON l.bloc_cible_id = bc.id
+           WHERE bs.espace_id = ? OR bc.espace_id = ?
+           ORDER BY l.created_at""",
+        (espace_id, espace_id),
     )
 
     # Récupérer les types de contenus par bloc (pour icônes indicatrices canvas)
@@ -84,13 +93,20 @@ async def get_espace(espace_id: str):
             types_par_bloc[bid].append(t)
 
     espace = dict(rows[0])
+    espace["scope"] = "espace"
     blocs_list = []
     for b in blocs:
         bd = dict(b)
         bd["content_types"] = types_par_bloc.get(bd["id"], [])
         blocs_list.append(bd)
     espace["blocs"] = blocs_list
-    espace["liaisons"] = [dict(li) for li in liaisons]
+    liaisons_enriched = []
+    for li in liaisons:
+        d = dict(li)
+        d["inter_espace"] = d.get("espace_source") != d.get("espace_cible")
+        d["scope"] = "global" if d["inter_espace"] else "espace"
+        liaisons_enriched.append(d)
+    espace["liaisons"] = liaisons_enriched
     return espace
 
 
@@ -104,11 +120,12 @@ async def update_espace(espace_id: str, data: EspaceUpdate):
     current = dict(rows[0])
     nom = data.nom if data.nom is not None else current["nom"]
     theme = data.theme if data.theme is not None else current["theme"]
+    couleur_id = data.couleur_identite if data.couleur_identite is not None else current.get("couleur_identite")
     now = datetime.now(timezone.utc).isoformat()
 
     await db.execute(
-        "UPDATE espaces SET nom = ?, theme = ?, updated_at = ? WHERE id = ?",
-        (nom, theme, now, espace_id),
+        "UPDATE espaces SET nom = ?, theme = ?, couleur_identite = ?, updated_at = ? WHERE id = ?",
+        (nom, theme, couleur_id, now, espace_id),
     )
     await db.commit()
     row = await db.execute_fetchall("SELECT * FROM espaces WHERE id = ?", (espace_id,))
@@ -122,7 +139,12 @@ async def delete_espace(espace_id: str):
     if not rows:
         raise HTTPException(status_code=404, detail="Espace non trouvé")
 
-    await db.execute("DELETE FROM liaisons WHERE espace_id = ?", (espace_id,))
+    # Supprimer les liaisons dont au moins un bloc est dans cet espace
+    await db.execute(
+        """DELETE FROM liaisons WHERE bloc_source_id IN (SELECT id FROM blocs WHERE espace_id = ?)
+           OR bloc_cible_id IN (SELECT id FROM blocs WHERE espace_id = ?)""",
+        (espace_id, espace_id),
+    )
     await db.execute(
         "DELETE FROM contenus_bloc WHERE bloc_id IN (SELECT id FROM blocs WHERE espace_id = ?)",
         (espace_id,),

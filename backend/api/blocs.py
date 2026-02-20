@@ -33,6 +33,8 @@ class BlocCreate(BaseModel):
 class BlocUpdate(BaseModel):
     x: float | None = None
     y: float | None = None
+    x_global: float | None = None
+    y_global: float | None = None
     forme: Forme | None = None
     couleur: Couleur | None = None
     largeur: float | None = None
@@ -93,11 +95,14 @@ async def update_bloc(bloc_id: str, data: BlocUpdate):
     now = datetime.now(timezone.utc).isoformat()
 
     await db.execute(
-        """UPDATE blocs SET x = ?, y = ?, forme = ?, couleur = ?, largeur = ?, hauteur = ?, updated_at = ?
+        """UPDATE blocs SET x = ?, y = ?, x_global = ?, y_global = ?,
+           forme = ?, couleur = ?, largeur = ?, hauteur = ?, updated_at = ?
            WHERE id = ?""",
         (
             data.x if data.x is not None else current["x"],
             data.y if data.y is not None else current["y"],
+            data.x_global if data.x_global is not None else current.get("x_global"),
+            data.y_global if data.y_global is not None else current.get("y_global"),
             data.forme if data.forme is not None else current["forme"],
             data.couleur if data.couleur is not None else current["couleur"],
             data.largeur if data.largeur is not None else current["largeur"],

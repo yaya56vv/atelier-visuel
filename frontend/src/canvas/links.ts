@@ -1,4 +1,4 @@
-// Canvas2D — Liaisons
+﻿// Canvas2D — Liaisons
 // Tube fin avec liserés fluorescents nets + flux intérieur visible
 // Courbes de Bézier cubiques — ancrage précis sur le contour des formes
 
@@ -125,7 +125,7 @@ function drawLiseres(
   // Trait interne sombre (creuse le tube pour donner l'effet de deux liserés)
   traceBezier(ctx, a1, cp1, cp2, a2)
   ctx.strokeStyle = `rgba(0, 0, 0, 0.55)`
-  ctx.lineWidth = 2
+  ctx.lineWidth = 2 * scale
   ctx.stroke()
 
   ctx.restore()
@@ -234,6 +234,12 @@ export function drawLiaison(
   // Appliquer le dash du type de liaison
   const typeStyle = THEME.liaison.types[liaison.type] || THEME.liaison.types.simple
 
+  // V2 : épaisseur modulée par le poids (0.0–1.0)
+  const poids = liaison.poids ?? 1.0
+  const poidsScale = 0.4 + poids * 0.6  // de 0.4x à 1.0x
+  const isInter = liaison.interEspace === true
+  const isEnAttente = liaison.validation === 'en_attente'
+
   // Rendu (du plus profond au plus superficiel) :
 
   // Halo doré si sélectionné
@@ -243,15 +249,23 @@ export function drawLiaison(
 
   // 1. Liserés fluorescents nets
   ctx.save()
-  if (typeStyle.dash.length > 0) {
-    // Pour les liaisons en pointillés, appliquer le dash sur les liserés aussi
+  // Liaisons inter-espaces : pointillés longs distincts
+  if (isInter) {
+    ctx.setLineDash([18, 8])
+  } else if (typeStyle.dash.length > 0) {
     ctx.setLineDash(typeStyle.dash)
   }
-  drawLiseres(ctx, anchor1, cp1, cp2, anchor2, rgb)
+  // Suggestions IA en attente : opacité réduite
+  if (isEnAttente) {
+    ctx.globalAlpha = 0.5
+  }
+  drawLiseres(ctx, anchor1, cp1, cp2, anchor2, rgb, poidsScale)
   ctx.restore()
 
-  // 2. Flux intérieur animé
-  drawFlowAnimation(ctx, anchor1, cp1, cp2, anchor2, rgb, time)
+  // 2. Flux intérieur animé (pas sur les suggestions en attente)
+  if (!isEnAttente) {
+    drawFlowAnimation(ctx, anchor1, cp1, cp2, anchor2, rgb, time)
+  }
 
   return true
 }

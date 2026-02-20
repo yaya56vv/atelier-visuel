@@ -4,13 +4,15 @@
 import { useState } from 'react'
 
 interface TopBarProps {
-  espaces: { id: string; nom: string }[]
+  espaces: { id: string; nom: string; couleur_identite?: string }[]
   espaceActifId: string | null
+  scope: 'espace' | 'global'
   onSelectEspace: (id: string) => void
   onCreateEspace: (nom: string) => void
+  onToggleGlobal: () => void
 }
 
-export default function TopBar({ espaces, espaceActifId, onSelectEspace, onCreateEspace }: TopBarProps) {
+export default function TopBar({ espaces, espaceActifId, scope, onSelectEspace, onCreateEspace, onToggleGlobal }: TopBarProps) {
   const [showCreate, setShowCreate] = useState(false)
   const [newName, setNewName] = useState('')
 
@@ -51,8 +53,22 @@ export default function TopBar({ espaces, espaceActifId, onSelectEspace, onCreat
         <span style={styles.title}>Atelier Visuel</span>
       </div>
 
-      {/* Zone droite réservée */}
-      <div style={styles.right} />
+      {/* Zone droite — Bouton Graphe Global */}
+      <div style={styles.right}>
+        <button
+          onClick={onToggleGlobal}
+          style={{
+            ...styles.globalBtn,
+            background: scope === 'global' ? 'rgba(255, 200, 100, 0.15)' : 'transparent',
+            color: scope === 'global' ? 'rgba(255, 210, 120, 1)' : 'rgba(160, 170, 200, 0.6)',
+            borderColor: scope === 'global' ? 'rgba(255, 200, 100, 0.35)' : 'rgba(80, 80, 120, 0.25)',
+            boxShadow: scope === 'global' ? '0 0 10px rgba(255, 200, 100, 0.1)' : 'none',
+          }}
+          title={scope === 'global' ? 'Revenir à l\'espace' : 'Vue graphe global'}
+        >
+          ◉ Global
+        </button>
+      </div>
 
       {/* Formulaire de création */}
       {showCreate && (
@@ -101,7 +117,20 @@ const styles: Record<string, React.CSSProperties> = {
   },
   right: {
     flex: '0 0 auto',
-    width: 120,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  globalBtn: {
+    border: '1px solid',
+    borderRadius: 4,
+    padding: '4px 10px',
+    fontSize: 11,
+    fontWeight: 500,
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    letterSpacing: '0.3px',
+    background: 'transparent',
   },
   title: {
     color: 'rgba(200, 200, 220, 0.8)',

@@ -177,6 +177,71 @@ Date de création : 17/02/2026
 
 ---
 
+## Étape 3 (CENTRAL.md) — Import universel multi-format
+
+- Objectif : Implémenter l'import universel de documents (80+ formats : DOCX, JSON, CSV, code source, YouTube, audio, images) avec extraction de texte, parsing, et intégration comme contenu de bloc
+- Critère de fin : Tous les formats supportés sont importés avec icône de type dans le canvas. YouTube génère une transcription automatique. Audio utilise Whisper GPU local.
+- Fichiers : import_parser.py, upload.py, shapes.ts, api.ts
+- Statut : FAIT
+
+---
+
+## Étape 4 — Intégration filesystem + scan différentiel
+
+### 4A — Fondation base de données et API
+- Objectif : Créer les tables `dossiers_surveilles`, `fichiers_indexes`, `journal_scan`. API REST pour gérer les dossiers surveillés et déclencher les scans.
+- Service de scan différentiel (CPU léger, détection nouveaux/modifiés/supprimés/déplacés via hash SHA-256)
+- Fichiers : schema.sql, database.py, api/filesystem.py, services/scan_diff.py, api.ts
+- Statut : FAIT
+
+### 4B — Intégration des fichiers dans le graphe
+- Prérequis : graphe global inter-espaces (cf. Étape 4-bis) → FAIT
+- Objectif : transformer les fichiers indexés en blocs du graphe avec couleur/forme selon type
+- Fichiers : services/fichiers_graphe.py, api/filesystem.py (endpoints integrer/desintegrer), api.ts
+- Mapping extension → couleur sémantique + forme (document=vert/rect, code=jaune/carré, image=mauve/cercle, etc.)
+- Intégration sur demande (POST /filesystem/integrer/{id}), pas automatique
+- Désintégration propre (DELETE /filesystem/integrer/{id})
+- Statut : FAIT
+
+---
+
+## Étape 4-bis — Graphe global inter-espaces
+
+### Phase 1 — Migration du modèle de données
+- Objectif : Nouveau schéma `liaisons` unifié (11 types, poids, origine, validation), ajout `x_global`/`y_global` aux blocs, `couleur_identite` aux espaces
+- Migration automatique _migrate_v2_graphe_global() dans database.py
+- Statut : FAIT
+
+### Phase 2 — API enrichie
+- Objectif : Champ `scope` explicite dans toutes les réponses. Modifier liaisons (inter-espaces possibles). Créer GET /api/graphe-global avec filtres.
+- Fichiers : api/graphe_global.py, api/espaces.py, api/liaisons.py, api/blocs.py
+- Statut : FAIT
+
+### Phase 3 — Store frontend bi-mode
+- Objectif : Types TypeScript enrichis (scope, x_global/y_global, couleur_identite), blocsStore bi-mode (espace/global), switchToEspace/loadGrapheGlobal
+- Fichiers : api.ts, canvas/shapes.ts, stores/blocsStore.ts
+- Statut : FAIT
+
+### Phase 4 — Filtres dans l'explorateur
+- Objectif : Panneau filtres étendu en mode global (multi-sélection espaces avec chips colorées, 11 types liaison, slider poids min, filtre validation, toggle inter-espaces)
+- Bouton ◉ Global dans TopBar avec bascule espace/global
+- Rechargement automatique du graphe à chaque changement de filtre
+- Fichiers : TopBar.tsx, SidePanel.tsx (GlobalFilters), BottomBar.tsx, App.tsx, espaceStore.ts
+- Statut : FAIT
+
+### Phase 5 — IA et positionnement
+- Objectif : Algorithme positionnement global (force-directed sur x_global/y_global), suggestions IA liaisons inter-espaces (heuristiques mots-clés/entités/couleurs)
+- reorganiser_global() dans force_layout.py (params adaptés : gravité douce, plus d'espace)
+- meta_graphe.py : détection paires inter-espaces, évaluation par termes communs, typage par couleurs sémantiques
+- Suggestions en état `en_attente` / `origine=ia_suggestion` — poids indicatif, utilisateur valide
+- Endpoints : POST /ia/reorganiser-global, POST /ia/suggerer-liaisons
+- Boutons ⚡ Global et 🔗 Suggérer dans BottomBar (mode global uniquement)
+- Statut : FAIT
+
+**Référence** : ARCHITECTURE_META_GRAPHE.md
+
+---
+
 ## Jalons Analyste
 
 - Après étape 6 : **Revue architecture Canvas2D** — Le moteur de rendu est-il performant, maintenable, fidèle au rendu cible ? Le bus d'événements est-il propre ?

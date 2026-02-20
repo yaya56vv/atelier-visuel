@@ -7,7 +7,10 @@ import { THEME, lightenRGB, darkenRGB } from './theme'
 
 export type Forme = 'cloud' | 'rounded-rect' | 'square' | 'oval' | 'circle'
 export type Couleur = 'green' | 'orange' | 'yellow' | 'blue' | 'violet' | 'mauve'
-export type TypeLiaison = 'simple' | 'logique' | 'tension' | 'ancree'
+export type TypeLiaison =
+  | 'simple' | 'logique' | 'tension' | 'ancree'
+  | 'prolongement' | 'fondation' | 'complementarite'
+  | 'application' | 'analogie' | 'dependance' | 'exploration'
 
 export interface LiaisonVisuelle {
   id: string
@@ -15,6 +18,12 @@ export interface LiaisonVisuelle {
   cibleId: string
   type: TypeLiaison
   couleur: Couleur
+  // V2 : champs graphe global
+  poids?: number           // 0.0 à 1.0, défaut 1.0
+  origine?: 'manuel' | 'auto' | 'ia_suggestion'
+  validation?: 'valide' | 'en_attente' | 'rejete'
+  interEspace?: boolean    // propriété dérivée
+  label?: string
 }
 
 export interface BlocVisuel {
@@ -29,6 +38,11 @@ export interface BlocVisuel {
   sousTitre?: string  // resume_ia ou extrait du contenu
   contentTypes?: string[]  // types de contenus (pdf, image, texte...) pour icônes indicatrices
   selected: boolean
+  // V2 : champs graphe global
+  espaceId?: string
+  couleurIdentiteEspace?: string  // hex couleur d’identité de l’espace (pour liseré mode global)
+  xGlobal?: number | null
+  yGlobal?: number | null
 }
 
 // ═══════════════════════════════════════════════════════════════

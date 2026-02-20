@@ -229,6 +229,37 @@ export const THEME = {
         opacityMultiplier: 1.0,
         widthBonus: 1,
       },
+      // V2 : types inter/intra enrichis
+      prolongement: {
+        dash: [] as number[],
+        opacityMultiplier: 1.0,
+      },
+      fondation: {
+        dash: [] as number[],
+        opacityMultiplier: 1.0,
+        widthBonus: 1,
+      },
+      complementarite: {
+        dash: [] as number[],
+        opacityMultiplier: 1.0,
+      },
+      application: {
+        dash: [] as number[],
+        opacityMultiplier: 1.0,
+      },
+      analogie: {
+        dash: [12, 6] as number[],
+        opacityMultiplier: 0.9,
+      },
+      dependance: {
+        dash: [] as number[],
+        opacityMultiplier: 1.0,
+        widthBonus: 1,
+      },
+      exploration: {
+        dash: [5, 5] as number[],
+        opacityMultiplier: 0.8,
+      },
     } as Record<string, { dash: number[]; opacityMultiplier: number; widthBonus?: number }>,
   },
 

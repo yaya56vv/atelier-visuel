@@ -184,18 +184,29 @@ CREATE TABLE contenus_bloc (
 );
 ```
 
-### 4.4 Table `liaisons`
+### 4.4 Table `liaisons` (modèle unifié intra/inter-espaces)
 
 ```sql
 CREATE TABLE liaisons (
     id TEXT PRIMARY KEY,
-    espace_id TEXT NOT NULL REFERENCES espaces(id),
     bloc_source_id TEXT NOT NULL REFERENCES blocs(id) ON DELETE CASCADE,
     bloc_cible_id TEXT NOT NULL REFERENCES blocs(id) ON DELETE CASCADE,
-    type TEXT NOT NULL CHECK(type IN ('simple', 'logique', 'tension', 'ancree')),
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    type TEXT NOT NULL DEFAULT 'simple' CHECK(type IN (
+        'simple', 'logique', 'tension', 'ancree',
+        'prolongement', 'fondation', 'complementarite',
+        'application', 'analogie', 'dependance', 'exploration'
+    )),
+    poids REAL DEFAULT 1.0 CHECK(poids >= 0.0 AND poids <= 1.0),
+    origine TEXT DEFAULT 'manuel' CHECK(origine IN ('manuel', 'auto', 'ia_suggestion')),
+    validation TEXT DEFAULT 'valide' CHECK(validation IN ('valide', 'en_attente', 'rejete')),
+    label TEXT,
+    metadata TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 ```
+
+> Note : le champ `espace_id` a été supprimé des liaisons. La propriété intra/inter-espace est dérivée des espace_id des blocs reliés.
 
 ### 4.5 Table `config_ia`
 
@@ -232,7 +243,8 @@ Ces emplacements sont prévus dans l'architecture dès le départ. Les modules, 
 | **Import multimodal** | Module import `src/modules/import/` | Service parsing `backend/services/import_parser.py` | `imports_log` |
 | **Recherche externe** | Module recherche `src/modules/recherche/` | Service recherche `backend/services/recherche_externe.py` | `sources_externes` |
 | **Embeddings / similarité** | Intégré au service IA | `backend/services/embeddings.py` | `vecteurs_blocs` |
-| **Analyse inter-espaces** | Module méta-graphe `src/modules/meta/` | `backend/services/meta_graphe.py` | `meta_liaisons` |
+| **Graphe global inter-espaces** | Mode global dans Canvas + filtres SidePanel | `GET /api/graphe-global` + table liaisons unifiée | Aucune table spécifique (modèle unifié) |
+| **Filesystem / Scan différentiel** | Module filesystem `src/modules/filesystem/` | `backend/services/scan_diff.py`, `backend/api/filesystem.py` | `dossiers_surveilles`, `fichiers_indexes`, `journal_scan` |
 | **Génération graphe initial** | Intégré à la console IA | `backend/services/generateur_graphe.py` | Aucune |
 
 **Règle stricte :** Ces emplacements sont des dossiers et fichiers vides (ou avec un commentaire d'intention). Aucun code provisoire, aucun placeholder fonctionnel, aucun "TODO" dans le code. L'emplacement existe, le contenu viendra quand le séquençage l'atteindra.
@@ -259,12 +271,21 @@ DELETE /api/liaisons/{id}               → Supprimer une liaison
 GET    /api/config-ia                   → Lire la configuration IA
 PUT    /api/config-ia                   → Modifier la configuration IA
 
+GET    /api/graphe-global               → Vue globale tous espaces (filtrable)
+
+POST   /api/upload/file                 → Upload fichier (80+ formats)
+POST   /api/upload/youtube              → Import vidéo YouTube + transcription
+
+GET    /api/filesystem/dossiers         → Dossiers surveillés
+POST   /api/filesystem/dossiers         → Ajouter un dossier
+POST   /api/filesystem/scan             → Scan différentiel
+GET    /api/filesystem/rapport          → Rapports de scan
+
 [RÉSERVÉ] POST /api/ia/analyser-espace  → Analyse complète d'un espace
-[RÉSERVÉ] POST /api/ia/suggerer-liaisons → Suggestions de liaisons
+[RÉSERVÉ] POST /api/ia/suggerer-liaisons → Suggestions de liaisons (intra et inter)
 [RÉSERVÉ] POST /api/ia/generer-graphe    → Génération d'un graphe initial
 [RÉSERVÉ] POST /api/vocal/stt            → Speech-to-text
 [RÉSERVÉ] POST /api/vocal/tts            → Text-to-speech
-[RÉSERVÉ] POST /api/import/parser        → Import et parsing de documents
 [RÉSERVÉ] POST /api/recherche/externe    → Recherche documentaire externe
 ```
 

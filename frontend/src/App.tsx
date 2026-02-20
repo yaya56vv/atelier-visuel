@@ -9,6 +9,7 @@ import BlocEditor from './components/BlocEditor'
 import ConfigIA from './components/ConfigIA'
 import { useEspaceStore } from './stores/espaceStore'
 import { useBlocsStore } from './stores/blocsStore'
+import { DEFAULT_GLOBAL_FILTERS, type GlobalFilters } from './components/SidePanel'
 import * as api from './api'
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
   const [liaisonVisibility, setLiaisonVisibility] = useState<string>('selection')
   const [dragOver, setDragOver] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [globalFilters, setGlobalFilters] = useState<GlobalFilters>({ ...DEFAULT_GLOBAL_FILTERS })
 
   const espaceStore = useEspaceStore()
   const blocsStore = useBlocsStore(espaceStore.espaceActifId)
@@ -146,6 +148,35 @@ function App() {
     if (!engine) return
     engine.setHighlightedBlocs(blocIds)
   }, [])
+
+  // ── Bascule espace / global ────────────────────────────
+  const handleToggleGlobal = useCallback(() => {
+    if (blocsStore.scope === 'global') {
+      blocsStore.switchToEspace()
+    } else {
+      blocsStore.loadGrapheGlobal({
+        espaces: globalFilters.espaces.length > 0 ? globalFilters.espaces : undefined,
+        types_liaison: globalFilters.typesLiaison.length > 0 ? globalFilters.typesLiaison : undefined,
+        inter_seulement: globalFilters.interSeulement || undefined,
+        poids_min: globalFilters.poidsMin > 0 ? globalFilters.poidsMin : undefined,
+        validation: globalFilters.validation || undefined,
+      })
+    }
+  }, [blocsStore, globalFilters])
+
+  // Recharger le graphe global quand les filtres changent
+  const handleGlobalFiltersChange = useCallback((newFilters: GlobalFilters) => {
+    setGlobalFilters(newFilters)
+    if (blocsStore.scope === 'global') {
+      blocsStore.loadGrapheGlobal({
+        espaces: newFilters.espaces.length > 0 ? newFilters.espaces : undefined,
+        types_liaison: newFilters.typesLiaison.length > 0 ? newFilters.typesLiaison : undefined,
+        inter_seulement: newFilters.interSeulement || undefined,
+        poids_min: newFilters.poidsMin > 0 ? newFilters.poidsMin : undefined,
+        validation: newFilters.validation || undefined,
+      })
+    }
+  }, [blocsStore])
 
   const handleRecenter = () => {
     const engine = engineRef.current
@@ -333,8 +364,10 @@ function App() {
       <TopBar
         espaces={espaceStore.espaces}
         espaceActifId={espaceStore.espaceActifId}
+        scope={blocsStore.scope}
         onSelectEspace={espaceStore.selectEspace}
         onCreateEspace={(nom) => espaceStore.createEspace(nom)}
+        onToggleGlobal={handleToggleGlobal}
       />
       <SidePanel
         blocs={blocsStore.blocs}
@@ -343,6 +376,10 @@ function App() {
         liaisonVisibility={liaisonVisibility}
         onLiaisonVisibilityChange={setLiaisonVisibility}
         onSearchHighlight={handleSearchHighlight}
+        scope={blocsStore.scope}
+        espaces={espaceStore.espaces}
+        globalFilters={globalFilters}
+        onGlobalFiltersChange={handleGlobalFiltersChange}
       />
       <BottomBar
         onRecenter={handleRecenter}
@@ -355,7 +392,16 @@ function App() {
           await api.reorganiserGraphe(espaceStore.espaceActifId)
           blocsStore.refreshEspace()
         }}
+        onReorganiserGlobal={async () => {
+          await api.reorganiserGlobal()
+          blocsStore.loadGrapheGlobal()
+        }}
+        onSuggererLiaisons={async () => {
+          await api.suggererLiaisons()
+          blocsStore.loadGrapheGlobal()
+        }}
         iaActive={showConsole}
+        scope={blocsStore.scope}
       />
       <ConsoleIA
         visible={showConsole}

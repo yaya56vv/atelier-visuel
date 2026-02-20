@@ -8,7 +8,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api import espaces, blocs, liaisons, config_ia, ia, upload
+from api import espaces, blocs, liaisons, config_ia, ia, upload, filesystem, graphe_global
 from db.database import init_db, close_db, seed_db
 
 # Charger .env depuis la racine du projet
@@ -51,6 +51,8 @@ app.include_router(liaisons.router, prefix="/api/liaisons", tags=["liaisons"])
 app.include_router(config_ia.router, prefix="/api/config-ia", tags=["config-ia"])
 app.include_router(ia.router, prefix="/api/ia", tags=["ia"])
 app.include_router(upload.router, prefix="/api/upload", tags=["upload"])
+app.include_router(filesystem.router, prefix="/api/filesystem", tags=["filesystem"])
+app.include_router(graphe_global.router, prefix="/api/graphe-global", tags=["graphe-global"])
 
 if __name__ == "__main__":
     import uvicorn

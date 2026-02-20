@@ -1,6 +1,8 @@
 // Barre inférieure — Enregistrer, recentrer, zoom, IA, réorganiser, stop
 // Commandes globales de navigation — les filtres/liaisons sont dans l'explorateur (SidePanel)
 
+import type { ViewScope } from '../stores/blocsStore'
+
 interface BottomBarProps {
   onSave?: () => void
   onRecenter?: () => void
@@ -9,8 +11,11 @@ interface BottomBarProps {
   onToggleIA?: () => void
   onConfigIA?: () => void
   onReorganiser?: () => void
+  onReorganiserGlobal?: () => void
+  onSuggererLiaisons?: () => void
   onStop?: () => void
   iaActive?: boolean
+  scope?: ViewScope
 }
 
 export default function BottomBar({
@@ -21,9 +26,13 @@ export default function BottomBar({
   onToggleIA,
   onConfigIA,
   onReorganiser,
+  onReorganiserGlobal,
+  onSuggererLiaisons,
   onStop,
   iaActive = false,
+  scope = 'espace',
 }: BottomBarProps) {
+  const isGlobal = scope === 'global'
   return (
     <footer style={styles.bar}>
       <div style={styles.group}>
@@ -54,9 +63,20 @@ export default function BottomBar({
         <button onClick={onConfigIA} style={styles.btn} title="Configuration IA">
           Config
         </button>
-        <button onClick={onReorganiser} style={styles.btnReorg} title="Réorganiser le graphe (force-directed)">
-          ⚡
-        </button>
+        {isGlobal ? (
+          <>
+            <button onClick={onReorganiserGlobal} style={styles.btnReorg} title="Positionner le graphe global (force-directed)">
+              ⚡ Global
+            </button>
+            <button onClick={onSuggererLiaisons} style={styles.btnSuggest} title="Suggestions IA de liaisons inter-espaces">
+              🔗 Suggérer
+            </button>
+          </>
+        ) : (
+          <button onClick={onReorganiser} style={styles.btnReorg} title="Réorganiser le graphe (force-directed)">
+            ⚡
+          </button>
+        )}
         <span style={styles.sep} />
         <button onClick={onStop} style={styles.btnStop} title="Arrêter">
           Stop
@@ -116,7 +136,16 @@ const styles: Record<string, React.CSSProperties> = {
     border: '1px solid rgba(120, 180, 255, 0.2)',
     borderRadius: 3,
     padding: '3px 8px',
-    fontSize: 13,
+    fontSize: 11,
+    cursor: 'pointer',
+  },
+  btnSuggest: {
+    background: 'rgba(120, 60, 40, 0.3)',
+    color: 'rgba(255, 200, 100, 0.9)',
+    border: '1px solid rgba(255, 200, 100, 0.25)',
+    borderRadius: 3,
+    padding: '3px 8px',
+    fontSize: 11,
     cursor: 'pointer',
   },
   btnStop: {

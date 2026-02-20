@@ -22,6 +22,7 @@ export interface EspaceAPI {
   id: string
   nom: string
   theme: string
+  couleur_identite?: string   // V2 : couleur d'identité graphe global
   created_at: string
   updated_at: string
   blocs?: BlocAPI[]
@@ -54,6 +55,8 @@ export interface BlocAPI {
   espace_id: string
   x: number
   y: number
+  x_global: number | null
+  y_global: number | null
   forme: string
   couleur: string
   largeur: number
@@ -86,6 +89,8 @@ export async function createBloc(data: {
 export async function updateBloc(id: string, data: {
   x?: number
   y?: number
+  x_global?: number
+  y_global?: number
   forme?: string
   couleur?: string
   largeur?: number
@@ -103,20 +108,38 @@ export async function deleteBloc(id: string): Promise<void> {
 
 // ─── Liaisons ────────────────────────────────────────────
 
+// V2 : modèle unifié intra/inter-espaces
+export type TypeLiaisonAPI =
+  | 'simple' | 'logique' | 'tension' | 'ancree'
+  | 'prolongement' | 'fondation' | 'complementarite'
+  | 'application' | 'analogie' | 'dependance' | 'exploration'
+
 export interface LiaisonAPI {
   id: string
-  espace_id: string
   bloc_source_id: string
   bloc_cible_id: string
-  type: string
+  type: TypeLiaisonAPI
+  poids: number              // 0.0 à 1.0 — strictement utilisateur, jamais algorithmique
+  origine: 'manuel' | 'auto' | 'ia_suggestion'
+  validation: 'valide' | 'en_attente' | 'rejete'
+  label: string | null
+  metadata: string | null
+  inter_espace: boolean      // propriété dérivée
+  scope: 'espace' | 'global' // dérivé de inter_espace
+  espace_source?: string
+  espace_cible?: string
   created_at: string
+  updated_at: string
 }
 
 export async function createLiaison(data: {
-  espace_id: string
   bloc_source_id: string
   bloc_cible_id: string
-  type?: string
+  type?: TypeLiaisonAPI
+  poids?: number
+  origine?: string
+  validation?: string
+  label?: string
 }): Promise<LiaisonAPI> {
   return request('/liaisons/', {
     method: 'POST',
@@ -124,8 +147,50 @@ export async function createLiaison(data: {
   })
 }
 
+export async function updateLiaison(id: string, data: {
+  type?: TypeLiaisonAPI
+  poids?: number
+  validation?: string
+  label?: string
+}): Promise<LiaisonAPI> {
+  return request(`/liaisons/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
 export async function deleteLiaison(id: string): Promise<void> {
   return request(`/liaisons/${id}`, { method: 'DELETE' })
+}
+
+// ─── Graphe Global ───────────────────────────────────────
+
+export interface GrapheGlobalAPI {
+  scope: 'global'
+  espaces: EspaceAPI[]
+  blocs: BlocAPI[]
+  liaisons: LiaisonAPI[]
+}
+
+export async function getGrapheGlobal(params?: {
+  espaces?: string[]
+  types_liaison?: string[]
+  inter_seulement?: boolean
+  poids_min?: number
+  validation?: string
+  couleur?: string
+  forme?: string
+}): Promise<GrapheGlobalAPI> {
+  const searchParams = new URLSearchParams()
+  if (params?.espaces?.length) searchParams.set('espaces', params.espaces.join(','))
+  if (params?.types_liaison?.length) searchParams.set('types_liaison', params.types_liaison.join(','))
+  if (params?.inter_seulement) searchParams.set('inter_seulement', 'true')
+  if (params?.poids_min !== undefined) searchParams.set('poids_min', String(params.poids_min))
+  if (params?.validation) searchParams.set('validation', params.validation)
+  if (params?.couleur) searchParams.set('couleur', params.couleur)
+  if (params?.forme) searchParams.set('forme', params.forme)
+  const qs = searchParams.toString()
+  return request(`/graphe-global/${qs ? '?' + qs : ''}`)
 }
 
 // ─── Contenus de bloc ────────────────────────────────────
@@ -293,4 +358,110 @@ export async function reorganiserGraphe(espaceId: string): Promise<string> {
     body: JSON.stringify({ espace_id: espaceId }),
   })
   return data.result
+}
+
+export async function reorganiserGlobal(): Promise<string> {
+  const data = await request<{ scope: string; result: string }>('/ia/reorganiser-global', {
+    method: 'POST',
+  })
+  return data.result
+}
+
+export async function suggererLiaisons(): Promise<string> {
+  const data = await request<{ scope: string; result: string }>('/ia/suggerer-liaisons', {
+    method: 'POST',
+  })
+  return data.result
+}
+
+// ─── Filesystem — Dossiers surveillés & scan différentiel ─────
+
+export interface DossierSurveille {
+  id: string
+  chemin_absolu: string
+  nom: string
+  actif: number
+  profondeur_max: number
+  extensions_filtre: string | null
+  espace_id: string
+  created_at: string
+  updated_at: string
+  fichiers_count?: number
+}
+
+export interface RapportScan {
+  fichiers_total: number
+  fichiers_nouveaux: number
+  fichiers_modifies: number
+  fichiers_supprimes: number
+  fichiers_deplaces: number
+  fichiers_inchanges: number
+  duree_ms: number
+  journal_id?: string
+}
+
+export interface FichierIndexe {
+  id: string
+  dossier_id: string
+  bloc_id: string | null
+  chemin_absolu: string
+  chemin_relatif: string
+  nom: string
+  extension: string
+  taille_octets: number
+  hash_contenu: string
+  date_modification: string
+  statut: 'actif' | 'modifie' | 'supprime' | 'deplace' | 'nouveau'
+}
+
+export async function listDossiers(): Promise<DossierSurveille[]> {
+  return request('/filesystem/dossiers')
+}
+
+export async function addDossier(data: {
+  chemin_absolu: string
+  espace_id: string
+  profondeur_max?: number
+  extensions_filtre?: string[]
+}): Promise<DossierSurveille & { scan_initial: RapportScan }> {
+  return request('/filesystem/dossiers', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function removeDossier(dossierId: string): Promise<{ deleted: string }> {
+  return request(`/filesystem/dossiers/${dossierId}`, { method: 'DELETE' })
+}
+
+export async function scanAll(): Promise<{ dossiers_scannes: number; rapports: RapportScan[] }> {
+  return request('/filesystem/scan', { method: 'POST' })
+}
+
+export async function scanDossier(dossierId: string): Promise<RapportScan> {
+  return request(`/filesystem/scan/${dossierId}`, { method: 'POST' })
+}
+
+export async function getRapports(): Promise<{ dossier_id: string; nom: string; dernier_scan: RapportScan | null }[]> {
+  return request('/filesystem/rapport')
+}
+
+export async function listFichiers(dossierId: string, statut?: string): Promise<FichierIndexe[]> {
+  const query = statut ? `?statut=${statut}` : ''
+  return request(`/filesystem/fichiers/${dossierId}${query}`)
+}
+
+/** 4B : Intègre les fichiers indexés d'un dossier comme blocs dans le graphe. */
+export async function integrerFichiers(dossierId: string): Promise<{
+  blocs_crees: number
+  espace_id?: string
+  message?: string
+  error?: string
+}> {
+  return request(`/filesystem/integrer/${dossierId}`, { method: 'POST' })
+}
+
+/** 4B : Supprime les blocs créés depuis les fichiers d'un dossier. */
+export async function desintegrerFichiers(dossierId: string): Promise<{ blocs_supprimes: number }> {
+  return request(`/filesystem/integrer/${dossierId}`, { method: 'DELETE' })
 }

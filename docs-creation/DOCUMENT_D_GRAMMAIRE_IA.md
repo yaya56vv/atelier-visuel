@@ -216,29 +216,51 @@ Exemple :
 
 ---
 
-## 9. Lecture inter-espaces (conceptualisée)
+## 9. Graphe global et liaisons inter-espaces
 
-> **Note :** Cette fonctionnalité est **conceptualisée mais non implémentée immédiatement**. Elle est documentée ici pour guider l'architecture future.
+> **Statut :** Architecture validée, en cours d’implémentation (cf. ARCHITECTURE_META_GRAPHE.md)
 
-### Principe
+### 9.1 Principe fondateur
 
-Le système doit permettre ultérieurement l'analyse de **relations entre espaces distincts**, formant un **méta-graphe** :
+Le système offre un graphe global où tous les blocs de tous les espaces coexistent. Les liaisons inter-espaces permettent de relier des blocs appartenant à des espaces différents.
 
-- Un espace = un nœud du méta-graphe
-- Les relations entre espaces = des méta-liaisons
+Le modèle de liaison est **unifié** : une seule table, une seule structure. La distinction intra/inter est une propriété dérivée, pas une catégorie.
 
-### Capacités futures envisagées
+### 9.2 Types de liaison inter-espaces
 
-| Capacité | Description |
-|----------|-------------|
-| **Détection de thèmes transversaux** | Identification de sujets communs entre plusieurs espaces |
-| **Suggestions de fusion** | Proposition de regrouper des espaces ayant une forte intersection |
-| **Analyse de dépendances** | Cartographie des relations de dépendance entre espaces |
-| **Vue méta-graphe** | Visualisation d'ensemble de tous les espaces et leurs relations |
+| Type | Signification | Couleur visuelle |
+|------|---------------|------------------|
+| prolongement | Une idée prolonge une autre | Bleu clair |
+| fondation | Un bloc fonde un autre | Violet clair |
+| tension | Friction entre domaines | Orange |
+| complementarite | Enrichissement mutuel | Vert clair |
+| application | Un concept se concrétise | Jaune |
+| analogie | Résonance entre domaines | Lavande |
+| dependance | Nécessité structurelle | Rose |
+| exploration | Lien hypothétique | Mauve |
 
-### Contrainte architecturale
+### 9.3 Rôle de l’IA dans le graphe global
 
-> La lecture inter-espaces doit fonctionner **sans modifier les espaces individuels**. Elle opère en lecture seule sur les espaces existants et produit une couche de visualisation séparée.
+L’IA peut :
+- **Détecter des thèmes transversaux** entre espaces via analyse sémantique
+- **Proposer des liaisons inter-espaces** avec type, poids, et justification
+- **Signaler des résonances** (analogies non vues par l’utilisateur)
+- **Identifier des dépendances** structurelles entre espaces
+
+Toutes les liaisons suggérées arrivent en statut `en_attente` avec `origine=ia_suggestion`. L’utilisateur valide ou rejette. Principe de souveraineté absolu.
+
+### 9.4 Heuristiques inter-espaces pour l’IA
+
+| Pattern détecté | Suggestion |
+|-----------------|------------|
+| Même entité nommée dans deux espaces | "Le concept X apparaît dans les deux espaces. Liaison de type prolongement ?" |
+| Bloc orange dans un espace, bloc jaune correspondant dans un autre | "Ce problème a peut-être trouvé sa solution dans l’autre espace." |
+| Deux espaces sans aucune liaison inter | "Ces espaces sont totalement isolés. Y a-t-il un lien ?" |
+| Bloc violet dans un espace, bloc bleu dans un autre qui résonne | "Ce cadre logique pourrait être fondé sur ce principe." |
+
+### 9.5 Contrainte architecturale
+
+> Le graphe global est une **vue supplémentaire**, pas un remplacement. Les graphes par espace restent la vue par défaut. Le graphe global n’altère jamais les positions ou structures des espaces individuels.
 
 ---
 

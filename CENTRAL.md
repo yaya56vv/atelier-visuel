@@ -1,7 +1,7 @@
 # CENTRAL.md — Atelier Visuel de Pensée
 
-Version : V1
-Date : 17/02/2026
+Version : V2
+Date : 20/02/2026
 Mainteneur : Humain uniquement
 
 ---
@@ -129,29 +129,52 @@ Ces métadonnées sont recalculables dynamiquement.
 - liste de liaisons sortantes
 - liste de liaisons entrantes
 
-### 2.3 Modèle des liaisons
+### 2.3 Modèle des liaisons (modèle unifié intra/inter-espaces)
 
-Structure : `id`, `bloc_source_id`, `bloc_cible_id`, `type_liaison`, `created_at`.
+Structure : `id`, `bloc_source_id`, `bloc_cible_id`, `type`, `poids`, `origine`, `validation`, `label`, `metadata`, `created_at`, `updated_at`.
 
-Types V1 :
+Le modèle est **unifié** : une seule table, une seule structure. Une liaison relie deux blocs, que ceux-ci soient dans le même espace ou dans des espaces différents. La distinction intra/inter-espace est une **propriété dérivée** (calculée depuis les `espace_id` des blocs), pas une catégorie structurelle.
 
-| Type | Description |
-|------|-------------|
-| Relation simple | Structure neutre |
-| Logique | Structuration |
-| Tension | Contradiction |
-| Ancrée | Toujours visible |
+Types de liaison (11 au total) :
 
-Liaisons symétriques en V1. Aucune pondération algorithmique.
+| Type | Description | Catégorie |
+|------|-------------|----------|
+| simple | Relation neutre | Intra (v1) |
+| logique | Structuration | Intra (v1) |
+| tension | Contradiction / friction | Intra (v1) |
+| ancree | Toujours visible | Intra (v1) |
+| prolongement | Une idée prolonge une autre | Inter/Intra |
+| fondation | Un bloc fonde un autre | Inter/Intra |
+| complementarite | Enrichissement mutuel | Inter/Intra |
+| application | Un concept se concrétise | Inter/Intra |
+| analogie | Résonance entre domaines | Inter/Intra |
+| dependance | Nécessité structurelle | Inter/Intra |
+| exploration | Lien hypothétique en validation | Inter/Intra |
 
-### 2.4 Espaces V1
+**Poids** (0.0 à 1.0) : force de la relation. Détermine la proximité visuelle dans le graphe global, l'épaisseur de la liaison, et le seuil de filtrage.
 
-Deux espaces seulement :
+**Origine** : `manuel` (créé par l'utilisateur), `auto` (détecté par algorithme), `ia_suggestion` (proposé par l'IA).
+
+**Validation** : `valide`, `en_attente` (suggestion IA non encore validée), `rejete`.
+
+### 2.4 Espaces et graphe global
+
+**Deux thématiques fondatrices** avec grilles de lecture travaillées :
 
 - **IDÉES** : réflexion large et transversale
 - **CONCEPTION** : structuration opérationnelle
 
-Palette identique entre espaces. Influence uniquement interprétative.
+Sous ces thématiques, l'utilisateur crée autant d'espaces que nécessaire. Palette sémantique identique entre espaces.
+
+Chaque espace possède une **couleur d'identité** (teintes désaturées : vert forêt, prune, bleu acier...) distincte de la palette sémantique des blocs, servant à l'identification dans le graphe global.
+
+**Graphe global** : vue où tous les blocs de tous les espaces coexistent. Les liaisons inter-espaces y sont visibles. Chaque espace forme un cluster dont la distance reflète la proximité sémantique.
+
+**Double système de coordonnées** :
+- `x`, `y` : position dans l'espace d'appartenance
+- `x_global`, `y_global` : position dans le graphe global (indépendante)
+
+**Filtres du graphe global** (combinables en ET logique) : par espace(s), par type de liaison, inter-espaces seulement, par poids minimum, par statut de validation, par couleur/forme sémantique.
 
 ### 2.5 Double représentation synchronisée
 
@@ -187,16 +210,17 @@ Métadonnées obligatoires à l'import : source, date d'import, type, statut (im
 
 Chaque modification (nœud/arête) est traçable. Le système préserve l'historique des états de manière non destructive. Prépare la collaboration future et permet le retour à un état antérieur.
 
-### 2.9 Invariants architecturaux V1
+### 2.9 Invariants architecturaux
 
 **Interdits :**
 
-1. Pondération algorithmique
-2. Hiérarchie parent-enfant
-3. Fusion automatique destructive
-4. Personnalisation avancée du graphe
-5. Moteur IA permanent (toujours activable/désactivable)
-6. Surcharge sémantique sur les liaisons
+1. Hiérarchie parent-enfant
+2. Fusion automatique destructive
+3. Personnalisation avancée du graphe
+4. Moteur IA permanent (toujours activable/désactivable)
+5. Duplication logique des liaisons entre tables différentes
+
+> Note : l'interdit V1 « pondération algorithmique » est levé pour le champ `poids` des liaisons (0.0–1.0), nécessaire au graphe global. Le poids reste indicatif et ne modifie jamais la structure du graphe automatiquement.
 
 ### 2.10 Architecture modulaire
 
@@ -381,14 +405,23 @@ CREATE TABLE contenus_bloc (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Liaisons
+-- Liaisons (modèle unifié intra/inter-espaces)
 CREATE TABLE liaisons (
     id TEXT PRIMARY KEY,
-    espace_id TEXT NOT NULL REFERENCES espaces(id),
     bloc_source_id TEXT NOT NULL REFERENCES blocs(id) ON DELETE CASCADE,
     bloc_cible_id TEXT NOT NULL REFERENCES blocs(id) ON DELETE CASCADE,
-    type TEXT NOT NULL CHECK(type IN ('simple','logique','tension','ancree')),
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    type TEXT NOT NULL DEFAULT 'simple' CHECK(type IN (
+        'simple','logique','tension','ancree',
+        'prolongement','fondation','complementarite',
+        'application','analogie','dependance','exploration'
+    )),
+    poids REAL DEFAULT 1.0 CHECK(poids >= 0.0 AND poids <= 1.0),
+    origine TEXT DEFAULT 'manuel' CHECK(origine IN ('manuel','auto','ia_suggestion')),
+    validation TEXT DEFAULT 'valide' CHECK(validation IN ('valide','en_attente','rejete')),
+    label TEXT,
+    metadata TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Configuration IA
@@ -404,9 +437,10 @@ CREATE TABLE config_ia (
 -- Index
 CREATE INDEX idx_blocs_espace ON blocs(espace_id);
 CREATE INDEX idx_contenus_bloc ON contenus_bloc(bloc_id);
-CREATE INDEX idx_liaisons_espace ON liaisons(espace_id);
 CREATE INDEX idx_liaisons_source ON liaisons(bloc_source_id);
 CREATE INDEX idx_liaisons_cible ON liaisons(bloc_cible_id);
+CREATE INDEX idx_liaisons_type ON liaisons(type);
+CREATE INDEX idx_liaisons_validation ON liaisons(validation);
 ```
 
 ### 3.8 API REST et WebSocket
@@ -423,15 +457,28 @@ DELETE     /api/liaisons/{id}
 GET/PUT    /api/config-ia
 ```
 
+**Endpoints implémentés (hors CRUD) :**
+
+```
+POST       /api/ia/ask                  → Question libre à l'IA
+POST       /api/ia/reorganiser           → Réorganisation IA d'un espace
+POST       /api/upload/file              → Upload fichier (80+ formats)
+POST       /api/upload/youtube           → Import vidéo YouTube + transcription
+GET        /api/filesystem/dossiers      → Dossiers surveillés
+POST       /api/filesystem/dossiers      → Ajouter un dossier
+POST       /api/filesystem/scan          → Scan différentiel
+GET        /api/filesystem/rapport       → Rapports de scan
+GET        /api/graphe-global            → Vue globale tous espaces (filtrable)
+```
+
 **Endpoints réservés :**
 
 ```
 [RÉSERVÉ] POST /api/ia/analyser-espace
-[RÉSERVÉ] POST /api/ia/suggerer-liaisons
+[RÉSERVÉ] POST /api/ia/suggerer-liaisons  → Suggestions intra et inter-espaces
 [RÉSERVÉ] POST /api/ia/generer-graphe
 [RÉSERVÉ] POST /api/vocal/stt
 [RÉSERVÉ] POST /api/vocal/tts
-[RÉSERVÉ] POST /api/import/parser
 [RÉSERVÉ] POST /api/recherche/externe
 ```
 
@@ -511,7 +558,8 @@ atelier-visuel/
 | Import multimodal | `src/modules/import/` | `services/import_parser.py` | `imports_log` |
 | Recherche externe | `src/modules/recherche/` | `services/recherche_externe.py` | `sources_externes` |
 | Embeddings / similarité | Intégré service IA | `services/embeddings.py` | `vecteurs_blocs` |
-| Analyse inter-espaces | `src/modules/meta/` | `services/meta_graphe.py` | `meta_liaisons` |
+| Graphe global inter-espaces | Mode global dans Canvas + filtres SidePanel | `GET /api/graphe-global` + table liaisons unifiée | Aucune table spécifique |
+| Filesystem / Scan différentiel | `src/modules/filesystem/` | `services/scan_diff.py`, `api/filesystem.py` | `dossiers_surveilles`, `fichiers_indexes`, `journal_scan` |
 | Génération graphe initial | Intégré console IA | `services/generateur_graphe.py` | — |
 
 Règle stricte : dossiers/fichiers vides ou avec commentaire d'intention. Aucun code provisoire.
@@ -809,11 +857,28 @@ Le système est un **accélérateur de fabrication de matière intellectuelle** 
 
 > L'IA accélère, propose, alimente — mais ne décide jamais. L'utilisateur reste souverain.
 
-### 5.11 Lecture inter-espaces (conceptualisée, non implémentée V1)
+### 5.11 Graphe global et liaisons inter-espaces
 
-Principe : analyse de relations entre espaces distincts formant un **méta-graphe** (un espace = un nœud, relations entre espaces = méta-liaisons).
+> **Statut** : Architecture validée, en cours d’implémentation (cf. ARCHITECTURE_META_GRAPHE.md)
 
-Capacités futures : détection de thèmes transversaux, suggestions de fusion, analyse de dépendances, vue méta-graphe.
+Le système offre un graphe global où tous les blocs de tous les espaces coexistent. Le modèle de liaison est unifié (cf. §2.3). La distinction intra/inter est une propriété dérivée.
+
+**Rôle de l’IA dans le graphe global :**
+- Détecter des thèmes transversaux entre espaces via analyse sémantique
+- Proposer des liaisons inter-espaces avec type, poids, et justification
+- Signaler des résonances (analogies non vues par l’utilisateur)
+- Identifier des dépendances structurelles entre espaces
+
+Toutes les suggestions arrivent en `en_attente` avec `origine=ia_suggestion`. L’utilisateur valide ou rejette.
+
+**Heuristiques inter-espaces pour l’IA :**
+
+| Pattern détecté | Suggestion |
+|-----------------|------------|
+| Même entité dans deux espaces | Liaison de type prolongement |
+| Bloc orange ici, bloc jaune là-bas | Le problème a peut-être sa solution dans l’autre espace |
+| Deux espaces sans aucune liaison inter | Ces espaces sont totalement isolés |
+| Bloc violet / bloc bleu qui résonne | Ce cadre logique pourrait être fondé sur ce principe |
 
 Contrainte : fonctionne en **lecture seule** sur les espaces existants, couche de visualisation séparée.
 

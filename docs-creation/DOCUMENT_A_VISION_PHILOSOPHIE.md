@@ -221,7 +221,7 @@ L'Assistant IA agit sur : création d'espace, recherche documentaire, propositio
 
 Le système constitue une synthèse de plusieurs paradigmes : bloc-notes universel, explorateur documentaire relationnel, système de second cerveau, graphe sémantique spatial, outil de brainstorming assisté, environnement de conception.
 
-Il est destiné à devenir un noyau central d'organisation cognitive personnelle.
+Il est destiné à devenir un noyau central d'organisation cognitive personnelle. À terme, le système offre une vue globale où tous les espaces coexistent dans un même graphe, reliés par des liaisons inter-espaces, permettant de naviguer l'ensemble des connaissances comme un tout vivant et interconnecté.
 
 Le positionnement est **professionnel** (R&D, conseil, stratégie, analyse documentaire avancée), et non grand public PKM. Le modèle envisagé repose sur un **local-first souverain** avec éventuelle couche cloud apportant collaboration et accélération.
 

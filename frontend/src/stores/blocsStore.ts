@@ -23,27 +23,40 @@ function toBlocVisuel(b: BlocAPI): BlocVisuel {
   }
 }
 
+/** Couleurs dédiées par type de liaison inter-espace (V2) */
+const COULEURS_INTER: Record<string, Couleur> = {
+  prolongement: 'blue',
+  fondation: 'violet',
+  tension: 'orange',
+  complementarite: 'green',
+  application: 'yellow',
+  analogie: 'blue',
+  dependance: 'mauve',
+  exploration: 'mauve',
+}
+
 /** Convertit une liaison API en LiaisonVisuelle pour le Canvas.
- *  La couleur de la liaison est héritée du bloc source —
- *  une liaison qui part d'un bloc vert est une liaison "matière", etc.
- *  Si le bloc source n'est pas trouvé, fallback par type de liaison.
+ *  - Liaisons intra-espace : couleur héritée du bloc source
+ *  - Liaisons inter-espace : couleur déterminée par le type de liaison
  */
 function toLiaisonVisuelle(l: LiaisonAPI, blocsMap: Map<string, BlocVisuel>): LiaisonVisuelle {
-  // Hériter la couleur du bloc source
-  const sourceBloc = blocsMap.get(l.bloc_source_id)
+  const isInter = l.inter_espace === true
   let couleur: Couleur = 'blue'
 
-  if (sourceBloc) {
-    couleur = sourceBloc.couleur
+  if (isInter) {
+    // Inter-espace : couleur par type
+    couleur = COULEURS_INTER[l.type] || 'blue'
   } else {
-    // Fallback par type si le bloc source n'est pas trouvé
-    const fallback: Record<string, Couleur> = {
-      simple: 'blue',
-      logique: 'blue',
-      tension: 'orange',
-      ancree: 'violet',
+    // Intra-espace : hériter la couleur du bloc source
+    const sourceBloc = blocsMap.get(l.bloc_source_id)
+    if (sourceBloc) {
+      couleur = sourceBloc.couleur
+    } else {
+      const fallback: Record<string, Couleur> = {
+        simple: 'blue', logique: 'blue', tension: 'orange', ancree: 'violet',
+      }
+      couleur = fallback[l.type] || 'blue'
     }
-    couleur = fallback[l.type] || 'blue'
   }
 
   return {
@@ -52,13 +65,21 @@ function toLiaisonVisuelle(l: LiaisonAPI, blocsMap: Map<string, BlocVisuel>): Li
     cibleId: l.bloc_cible_id,
     type: l.type as TypeLiaison,
     couleur,
+    poids: l.poids ?? 1.0,
+    origine: l.origine ?? 'manuel',
+    validation: l.validation ?? 'valide',
+    interEspace: isInter,
+    label: l.label ?? undefined,
   }
 }
+
+export type ViewScope = 'espace' | 'global'
 
 export function useBlocsStore(espaceActifId: string | null) {
   const [blocs, setBlocs] = useState<BlocVisuel[]>([])
   const [liaisons, setLiaisons] = useState<LiaisonVisuelle[]>([])
   const [loading, setLoading] = useState(false)
+  const [scope, setScope] = useState<ViewScope>('espace')
   // Debounce des mises à jour de position
   const updateTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
@@ -128,14 +149,13 @@ export function useBlocsStore(espaceActifId: string | null) {
     setLiaisons(prev => prev.filter(l => l.sourceId !== blocId && l.cibleId !== blocId))
   }, [])
 
-  // Créer une liaison
-  const createLiaison = useCallback(async (sourceId: string, cibleId: string) => {
+  // Créer une liaison (V2 : pas d'espace_id, modèle unifié)
+  const createLiaison = useCallback(async (sourceId: string, cibleId: string, type?: string) => {
     if (!espaceActifId) return
     const created = await api.createLiaison({
-      espace_id: espaceActifId,
       bloc_source_id: sourceId,
       bloc_cible_id: cibleId,
-      type: 'simple',
+      type: (type as any) || 'simple',
     })
     // Utiliser les blocs actuels pour la map de couleurs
     setBlocs(currentBlocs => {
@@ -188,6 +208,73 @@ export function useBlocsStore(espaceActifId: string | null) {
     } catch { /* ignore */ }
   }, [espaceActifId])
 
+  // ── Mode graphe global ──────────────────────────────────
+
+  /** Charge le graphe global (tous espaces). */
+  const loadGrapheGlobal = useCallback(async (params?: Parameters<typeof api.getGrapheGlobal>[0]) => {
+    setLoading(true)
+    setScope('global')
+    try {
+      const data = await api.getGrapheGlobal(params)
+      // Map des couleurs d'identité par espace
+      const couleurMap = new Map(data.espaces.map(e => [e.id, e.couleur_identite || '#667788']))
+
+      const newBlocs: BlocVisuel[] = (data.blocs || []).map(b => ({
+        id: b.id,
+        // En mode global, utiliser x_global/y_global si disponibles, sinon x/y
+        x: b.x_global ?? b.x,
+        y: b.y_global ?? b.y,
+        w: b.largeur,
+        h: b.hauteur,
+        forme: b.forme as Forme,
+        couleur: b.couleur as Couleur,
+        titre: b.titre_ia || (b as any).titre || '',
+        sousTitre: b.resume_ia || undefined,
+        contentTypes: b.content_types || [],
+        selected: false,
+        espaceId: b.espace_id,
+        couleurIdentiteEspace: couleurMap.get(b.espace_id),
+        xGlobal: b.x_global,
+        yGlobal: b.y_global,
+      }))
+      setBlocs(newBlocs)
+
+      const blocsMap = new Map(newBlocs.map(b => [b.id, b]))
+      setLiaisons((data.liaisons || []).map(l => toLiaisonVisuelle(l, blocsMap)))
+    } catch { /* backend pas lancé */ }
+    finally { setLoading(false) }
+  }, [])
+
+  /** Revient en mode espace. */
+  const switchToEspace = useCallback(() => {
+    setScope('espace')
+    // Recharger l'espace actif si on en a un
+    if (espaceActifId) {
+      setLoading(true)
+      api.getEspace(espaceActifId)
+        .then(data => {
+          const newBlocs = (data.blocs || []).map(toBlocVisuel)
+          setBlocs(newBlocs)
+          const blocsMap = new Map(newBlocs.map(b => [b.id, b]))
+          setLiaisons((data.liaisons || []).map(l => toLiaisonVisuelle(l, blocsMap)))
+        })
+        .catch(() => {})
+        .finally(() => setLoading(false))
+    }
+  }, [espaceActifId])
+
+  /** Persiste la position globale d'un bloc (debounced). */
+  const moveBlocGlobal = useCallback((blocId: string, xGlobal: number, yGlobal: number) => {
+    const key = `global-${blocId}`
+    const existing = updateTimers.current.get(key)
+    if (existing) clearTimeout(existing)
+    const timer = setTimeout(() => {
+      api.updateBloc(blocId, { x_global: xGlobal, y_global: yGlobal }).catch(() => {})
+      updateTimers.current.delete(key)
+    }, 300)
+    updateTimers.current.set(key, timer)
+  }, [])
+
   // Cleanup des timers
   useEffect(() => {
     return () => {
@@ -201,8 +288,10 @@ export function useBlocsStore(espaceActifId: string | null) {
     blocs,
     liaisons,
     loading,
+    scope,
     createBloc,
     moveBloc,
+    moveBlocGlobal,
     resizeBloc,
     deleteBloc,
     createLiaison,
@@ -211,5 +300,7 @@ export function useBlocsStore(espaceActifId: string | null) {
     changeBlocForme,
     changeBlocCouleur,
     refreshEspace,
+    loadGrapheGlobal,
+    switchToEspace,
   }
 }

@@ -1,4 +1,4 @@
-"""Connexion SQLite — Initialisation, fermeture, et seed de la base de données."""
+"""Connexion SQLite — Initialisation, fermeture, migrations et seed."""
 
 import os
 import uuid
@@ -11,6 +11,18 @@ DB_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "atelier.db"
 SCHEMA_PATH = Path(__file__).resolve().parent / "schema.sql"
 
 _db: aiosqlite.Connection | None = None
+
+# Palette de couleurs d'identité pour les espaces (graphe global)
+COULEURS_IDENTITE = [
+    "#4A6741",  # vert forêt
+    "#6B4A7A",  # prune
+    "#4A6B8A",  # bleu acier
+    "#8A6B4A",  # terre
+    "#6B8A4A",  # mousse
+    "#8A4A5A",  # bordeaux
+    "#4A8A7A",  # turquoise
+    "#7A7A4A",  # olive
+]
 
 
 async def get_db() -> aiosqlite.Connection:
@@ -30,16 +42,27 @@ async def init_db() -> None:
     await _db.executescript(schema)
     await _db.commit()
 
-    # Migration : ajouter les colonnes enrichies si absentes (3A)
+    # Migrations incrémentales
     await _migrate_contenus_bloc()
+    await _migrate_v2_graphe_global()
+
+
+# ═══════════════════════════════════════════════════════════════
+# MIGRATIONS
+# ═══════════════════════════════════════════════════════════════
+
+
+async def _get_columns(table: str) -> set[str]:
+    """Récupère les noms des colonnes d'une table."""
+    db = await get_db()
+    cursor = await db.execute(f"PRAGMA table_info({table})")
+    return {row[1] for row in await cursor.fetchall()}
 
 
 async def _migrate_contenus_bloc() -> None:
-    """Ajoute les colonnes de métadonnées enrichies à contenus_bloc si absentes."""
+    """V1 → 3A : colonnes enrichies sur contenus_bloc."""
     db = await get_db()
-    # Récupérer les colonnes existantes
-    cursor = await db.execute("PRAGMA table_info(contenus_bloc)")
-    existing = {row[1] for row in await cursor.fetchall()}
+    existing = await _get_columns("contenus_bloc")
 
     migrations = [
         ("hash_contenu", "ALTER TABLE contenus_bloc ADD COLUMN hash_contenu TEXT"),
@@ -54,9 +77,116 @@ async def _migrate_contenus_bloc() -> None:
     for col_name, sql in migrations:
         if col_name not in existing:
             await db.execute(sql)
-            print(f"[Migration] Ajout colonne contenus_bloc.{col_name}")
+            print(f"[Migration 3A] Ajout colonne contenus_bloc.{col_name}")
 
     await db.commit()
+
+
+async def _migrate_v2_graphe_global() -> None:
+    """V1 → V2 : modèle unifié liaisons + coordonnées globales + couleur identité.
+
+    Cette migration :
+    1. Ajoute x_global, y_global aux blocs
+    2. Ajoute couleur_identite aux espaces
+    3. Recrée la table liaisons avec le schéma V2 unifié
+       (SQLite ne supporte pas ALTER CHECK, on doit recréer)
+    """
+    db = await get_db()
+
+    # ── 1. Blocs : coordonnées globales ──────────────────
+    blocs_cols = await _get_columns("blocs")
+    if "x_global" not in blocs_cols:
+        await db.execute("ALTER TABLE blocs ADD COLUMN x_global REAL")
+        await db.execute("ALTER TABLE blocs ADD COLUMN y_global REAL")
+        print("[Migration V2] Ajout colonnes blocs.x_global, blocs.y_global")
+
+    # ── 2. Espaces : couleur d'identité ──────────────────
+    espaces_cols = await _get_columns("espaces")
+    if "couleur_identite" not in espaces_cols:
+        await db.execute("ALTER TABLE espaces ADD COLUMN couleur_identite TEXT DEFAULT '#667788'")
+        print("[Migration V2] Ajout colonne espaces.couleur_identite")
+
+        # Attribuer des couleurs aux espaces existants
+        rows = await db.execute_fetchall("SELECT id FROM espaces ORDER BY created_at")
+        for i, row in enumerate(rows):
+            couleur = COULEURS_IDENTITE[i % len(COULEURS_IDENTITE)]
+            await db.execute(
+                "UPDATE espaces SET couleur_identite = ? WHERE id = ?",
+                (couleur, row["id"]),
+            )
+        if rows:
+            print(f"[Migration V2] Couleurs d'identité attribuées à {len(rows)} espaces")
+
+    # ── 3. Liaisons : recréation avec schéma V2 ─────────
+    liaisons_cols = await _get_columns("liaisons")
+
+    if "poids" not in liaisons_cols:
+        # La table liaisons V1 existe avec espace_id et CHECK restreint
+        # On doit la recréer pour élargir les CHECK et supprimer espace_id
+        print("[Migration V2] Recréation table liaisons (V1 → V2 unifié)...")
+
+        # Sauvegarder les données existantes
+        existing_liaisons = await db.execute_fetchall("SELECT * FROM liaisons")
+        existing_data = [dict(r) for r in existing_liaisons]
+        print(f"[Migration V2] {len(existing_data)} liaisons existantes sauvegardées")
+
+        # Supprimer anciens index qui référencent l'ancienne table
+        await db.execute("DROP INDEX IF EXISTS idx_liaisons_espace")
+        await db.execute("DROP INDEX IF EXISTS idx_liaisons_source")
+        await db.execute("DROP INDEX IF EXISTS idx_liaisons_cible")
+        await db.execute("DROP INDEX IF EXISTS idx_liaisons_type")
+        await db.execute("DROP INDEX IF EXISTS idx_liaisons_validation")
+
+        # Supprimer l'ancienne table
+        await db.execute("DROP TABLE IF EXISTS liaisons")
+
+        # Créer la nouvelle table V2
+        await db.execute("""
+            CREATE TABLE liaisons (
+                id TEXT PRIMARY KEY,
+                bloc_source_id TEXT NOT NULL REFERENCES blocs(id) ON DELETE CASCADE,
+                bloc_cible_id TEXT NOT NULL REFERENCES blocs(id) ON DELETE CASCADE,
+                type TEXT NOT NULL DEFAULT 'simple' CHECK(type IN (
+                    'simple', 'logique', 'tension', 'ancree',
+                    'prolongement', 'fondation', 'complementarite',
+                    'application', 'analogie', 'dependance', 'exploration'
+                )),
+                poids REAL DEFAULT 1.0 CHECK(poids >= 0.0 AND poids <= 1.0),
+                origine TEXT DEFAULT 'manuel' CHECK(origine IN ('manuel', 'auto', 'ia_suggestion')),
+                validation TEXT DEFAULT 'valide' CHECK(validation IN ('valide', 'en_attente', 'rejete')),
+                label TEXT,
+                metadata TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # Recréer les index
+        await db.execute("CREATE INDEX idx_liaisons_source ON liaisons(bloc_source_id)")
+        await db.execute("CREATE INDEX idx_liaisons_cible ON liaisons(bloc_cible_id)")
+        await db.execute("CREATE INDEX idx_liaisons_type ON liaisons(type)")
+        await db.execute("CREATE INDEX idx_liaisons_validation ON liaisons(validation)")
+
+        # Réinsérer les données avec les valeurs par défaut V2
+        now = datetime.now(timezone.utc).isoformat()
+        for l in existing_data:
+            await db.execute(
+                """INSERT INTO liaisons
+                   (id, bloc_source_id, bloc_cible_id, type, poids, origine, validation, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, 1.0, 'manuel', 'valide', ?, ?)""",
+                (l["id"], l["bloc_source_id"], l["bloc_cible_id"], l["type"],
+                 l["created_at"], now),
+            )
+
+        print(f"[Migration V2] {len(existing_data)} liaisons restaurées avec schéma V2")
+
+    await db.commit()
+    print("[Migration V2] Migration graphe global terminée ✓")
+
+
+# ═══════════════════════════════════════════════════════════════
+# FERMETURE
+# ═══════════════════════════════════════════════════════════════
 
 
 async def close_db() -> None:
@@ -64,6 +194,11 @@ async def close_db() -> None:
     if _db is not None:
         await _db.close()
         _db = None
+
+
+# ═══════════════════════════════════════════════════════════════
+# SEED — Données initiales
+# ═══════════════════════════════════════════════════════════════
 
 
 async def seed_db() -> None:
@@ -86,16 +221,15 @@ async def seed_db() -> None:
     espace_conception = str(uuid.uuid4())
 
     await db.execute(
-        "INSERT INTO espaces (id, nom, theme, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-        (espace_idees, "IDÉES", "réflexion", now, now),
+        "INSERT INTO espaces (id, nom, theme, couleur_identite, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+        (espace_idees, "IDÉES", "réflexion", COULEURS_IDENTITE[0], now, now),
     )
     await db.execute(
-        "INSERT INTO espaces (id, nom, theme, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-        (espace_conception, "CONCEPTION", "structuration", now, now),
+        "INSERT INTO espaces (id, nom, theme, couleur_identite, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+        (espace_conception, "CONCEPTION", "structuration", COULEURS_IDENTITE[1], now, now),
     )
 
     # ─── Blocs de démo dans IDÉES ────────────────────────
-    # Chaque bloc illustre une combinaison couleur×forme de la grammaire sémantique
     blocs_demo = [
         {
             "couleur": "green", "forme": "cloud",
@@ -154,24 +288,20 @@ async def seed_db() -> None:
             (cid, bid, b["contenu"], now),
         )
 
-    # ─── Liaisons entre blocs ────────────────────────────
-    # Bloc 0 (vert) → Bloc 2 (jaune) : simple (le fait nourrit la règle)
-    # Bloc 1 (orange) → Bloc 2 (jaune) : logique (le problème appelle la solution)
-    # Bloc 4 (violet) → Bloc 3 (bleu) : simple (la conviction fonde l'analyse)
-    # Bloc 5 (mauve) → Bloc 0 (vert) : simple (l'hypothèse explore le fait)
+    # ─── Liaisons V2 (sans espace_id) ────────────────────
     liaisons_demo = [
-        (bloc_ids[0], bloc_ids[2], "simple"),
-        (bloc_ids[1], bloc_ids[2], "logique"),
-        (bloc_ids[4], bloc_ids[3], "simple"),
-        (bloc_ids[5], bloc_ids[0], "simple"),
+        (bloc_ids[0], bloc_ids[2], "simple"),     # vert → jaune
+        (bloc_ids[1], bloc_ids[2], "logique"),     # orange → jaune
+        (bloc_ids[4], bloc_ids[3], "fondation"),   # violet → bleu (V2 : fondation)
+        (bloc_ids[5], bloc_ids[0], "exploration"), # mauve → vert (V2 : exploration)
     ]
 
     for src, dst, ltype in liaisons_demo:
         lid = str(uuid.uuid4())
         await db.execute(
-            """INSERT INTO liaisons (id, espace_id, bloc_source_id, bloc_cible_id, type, created_at)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (lid, espace_idees, src, dst, ltype, now),
+            """INSERT INTO liaisons (id, bloc_source_id, bloc_cible_id, type, poids, origine, validation, created_at, updated_at)
+               VALUES (?, ?, ?, ?, 1.0, 'manuel', 'valide', ?, ?)""",
+            (lid, src, dst, ltype, now, now),
         )
 
     # ─── Config IA depuis .env ───────────────────────────
@@ -180,7 +310,6 @@ async def seed_db() -> None:
     graphe_model = os.environ.get("IA_GRAPHE_MODEL", "anthropic/claude-opus-4.6")
     assistant_model = os.environ.get("IA_ASSISTANT_MODEL", "anthropic/claude-opus-4.6")
 
-    # Seed config IA seulement si pas déjà configurée
     existing = await db.execute_fetchall("SELECT role FROM config_ia")
     existing_roles = {r["role"] for r in existing}
 

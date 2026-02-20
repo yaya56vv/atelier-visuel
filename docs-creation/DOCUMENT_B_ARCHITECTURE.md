@@ -73,14 +73,45 @@ Structure :
 - id
 - bloc_source_id
 - bloc_cible_id
-- type_liaison
-- created_at
+- type
+- poids (0.0 à 1.0)
+- origine (manuel / auto / ia_suggestion)
+- validation (valide / en_attente / rejete)
+- label (optionnel)
+- metadata (JSON libre)
+- created_at, updated_at
 
-Types V1 :
-- Relation simple
-- Liaison logique
-- Liaison tension
-- Liaison ancrée (toujours visible)
+### 3.1 Types de liaison
+
+Le modèle unifie les liaisons intra-espace et inter-espaces. La distinction intra/inter est une propriété dérivée (calculée depuis les espace_id des blocs reliés), pas une catégorie structurelle.
+
+Types intra-espace :
+- simple — relation neutre
+- logique — structuration
+- tension — contradiction
+- ancree — toujours visible
+
+Types inter-espaces (fonctionnent aussi en intra) :
+- prolongement — une idée prolonge une autre
+- fondation — un bloc fonde un autre
+- complementarite — deux blocs s’enrichissent mutuellement
+- application — un concept se concrétise
+- analogie — résonance entre domaines différents
+- dependance — un bloc nécessite un autre
+- exploration — lien hypothétique en cours de validation
+
+### 3.2 Poids et validation
+
+Le poids (0.0 à 1.0) encode la force de la relation. Il détermine :
+- la proximité visuelle entre espaces dans le graphe global
+- l’épaisseur de la liaison à l’écran
+- le seuil de filtrage (masquer les liaisons faibles)
+
+La validation permet le flux de découverte IA : l’IA crée des liaisons `en_attente` que l’utilisateur accepte ou rejette.
+
+### 3.3 Propriété dérivée inter_espace
+
+Une liaison est inter-espace si et seulement si espace_id(bloc_source) ≠ espace_id(bloc_cible). Cette propriété n’est pas stockée, elle est calculée à la requête.
 
 ---
 
@@ -167,23 +198,28 @@ Aucune modification définitive sans validation.
 
 ## 9. Sémantique par espace
 
-Espaces V1 :
-- IDÉES
-- CONCEPTION
+Deux thématiques fondatrices :
+- **IDÉES** — réflexion large et transversale
+- **CONCEPTION** — structuration opérationnelle
 
-Palette identique.
-Influence uniquement interprétative.
+Chaque thématique offre une grille de lecture travaillée. Sous ces thématiques, l’utilisateur crée autant d’espaces que nécessaire (ex : espace « Révolution française » sous IDÉES, espace « Architecture Atelier » sous CONCEPTION).
+
+Palette sémantique (couleurs/formes des blocs) identique entre espaces. Influence uniquement interprétative.
+
+Chaque espace possède une **couleur d’identité** distincte de la palette sémantique des blocs (teintes désaturées : vert forêt, prune, bleu acier, terre...). Cette couleur identifie l’espace d’appartenance dans le graphe global.
 
 ---
 
-## 10. Invariants architecturaux V1
+## 10. Invariants architecturaux
 
 Interdits :
-1. Pondération algorithmique
-2. Hiérarchie parent-enfant
-3. Fusion automatique destructive
-4. Personnalisation avancée du graphe
-5. Moteur IA permanent
+1. Hiérarchie parent-enfant
+2. Fusion automatique destructive
+3. Personnalisation avancée du graphe
+4. Moteur IA permanent
+5. Duplication logique des liaisons entre tables différentes
+
+> Note : l’ancien interdit « pondération algorithmique » est levé pour le champ `poids` des liaisons (0.0–1.0), nécessaire au graphe global. Le poids reste indicatif et ne modifie jamais la structure du graphe automatiquement.
 
 ### Versioning graphe non destructif
 
@@ -279,12 +315,53 @@ Imposé :
 Les blocs sont des conteneurs riches :
 - Texte structuré
 - Images
-- Documents
+- Documents (PDF, DOCX, code source, JSON, CSV...)
 - Extraits
 - Métadonnées
 - Références croisées
-- Liens inter-espaces
+- Vidéos référencées (YouTube avec transcription)
+- Audio/podcasts (transcription Whisper)
 - Résultats IA validés
 
 Conséquence :
 Conception native multi-contenus.
+
+---
+
+## 17. Graphe global inter-espaces
+
+### 17.1 Principe
+
+Le graphe global est une vue où TOUS les blocs de TOUS les espaces coexistent spatialement. Les liaisons inter-espaces y sont visibles. Chaque espace forme un cluster, et la distance entre clusters reflète la proximité sémantique.
+
+### 17.2 Double système de coordonnées
+
+Chaque bloc possède :
+- `x`, `y` : position dans son espace d’appartenance
+- `x_global`, `y_global` : position dans le graphe global
+
+Les deux systèmes sont indépendants. Déplacer un bloc dans le graphe global ne modifie pas sa position dans son espace.
+
+### 17.3 Système de filtres
+
+Le graphe global offre des filtres combinables (ET logique) :
+- Par espace(s) — multi-sélection
+- Par type de liaison
+- Inter-espaces seulement (toggle)
+- Par poids minimum (slider)
+- Par statut de validation
+- Par couleur/forme sémantique des blocs
+
+### 17.4 Rendu visuel
+
+- Couleur du bloc = intention sémantique (inchangée)
+- Liseré de contour = couleur d’identité de l’espace
+- Liaisons inter-espaces : pointillés longs, couleur déterminée par le type de liaison, épaisseur proportionnelle au poids
+- Liaisons intra-espace : rendu habituel (tube fin + flux animé)
+
+### 17.5 Garanties
+
+- Chaque bloc a UN identifiant et UN espace d’appartenance
+- Une liaison existe UNE SEULE fois (pas de duplication)
+- Les filtres ne génèrent aucun doublon logique
+- Performance stable avec croissance progressive du nombre de blocs (LOD spatial actif)

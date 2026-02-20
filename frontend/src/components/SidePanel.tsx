@@ -4,9 +4,27 @@
 // Vue Liste synchronisée avec le graphe
 
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react'
-import type { BlocVisuel, Couleur } from '../canvas/shapes'
+import type { BlocVisuel, Couleur, TypeLiaison } from '../canvas/shapes'
+import type { ViewScope } from '../stores/blocsStore'
 
 type LiaisonVisibility = 'selection' | 'all' | string
+
+/** Filtres spécifiques au mode global */
+export interface GlobalFilters {
+  espaces: string[]         // IDs d'espaces sélectionnés (vide = tous)
+  typesLiaison: string[]    // types filtrés (vide = tous)
+  interSeulement: boolean
+  poidsMin: number          // 0.0 à 1.0
+  validation: string | null // 'valide' | 'en_attente' | 'rejete' | null
+}
+
+export const DEFAULT_GLOBAL_FILTERS: GlobalFilters = {
+  espaces: [],
+  typesLiaison: [],
+  interSeulement: false,
+  poidsMin: 0.0,
+  validation: null,
+}
 
 interface SidePanelProps {
   blocs: BlocVisuel[]
@@ -15,6 +33,11 @@ interface SidePanelProps {
   liaisonVisibility: LiaisonVisibility
   onLiaisonVisibilityChange: (mode: LiaisonVisibility) => void
   onSearchHighlight: (blocIds: Set<string>) => void
+  // V2 : mode global
+  scope: ViewScope
+  espaces?: { id: string; nom: string; couleur_identite?: string }[]
+  globalFilters?: GlobalFilters
+  onGlobalFiltersChange?: (filters: GlobalFilters) => void
 }
 
 /** Largeur de la barre d'invitation quand le panneau est ferme */
@@ -39,6 +62,27 @@ const FORME_LABELS: Record<string, string> = {
   oval: 'Processus',
   circle: 'Centre',
 }
+
+/** Labels des types de liaison pour le filtre global */
+const TYPE_LIAISON_LABELS: Record<string, { label: string; couleur: string }> = {
+  simple: { label: 'Simple', couleur: 'rgba(160,165,190,0.7)' },
+  logique: { label: 'Logique', couleur: 'rgba(64,188,255,0.8)' },
+  tension: { label: 'Tension', couleur: 'rgba(255,138,48,0.8)' },
+  ancree: { label: 'Ancrée', couleur: 'rgba(162,96,255,0.8)' },
+  prolongement: { label: 'Prolongement', couleur: 'rgba(64,188,255,0.7)' },
+  fondation: { label: 'Fondation', couleur: 'rgba(162,96,255,0.7)' },
+  complementarite: { label: 'Complément.', couleur: 'rgba(30,225,100,0.7)' },
+  application: { label: 'Application', couleur: 'rgba(255,214,56,0.7)' },
+  analogie: { label: 'Analogie', couleur: 'rgba(64,188,255,0.6)' },
+  dependance: { label: 'Dépendance', couleur: 'rgba(215,140,255,0.7)' },
+  exploration: { label: 'Exploration', couleur: 'rgba(215,140,255,0.5)' },
+}
+
+const VALIDATION_OPTIONS = [
+  { key: 'valide', label: 'Validées', couleur: 'rgba(30,225,100,0.7)' },
+  { key: 'en_attente', label: 'En attente', couleur: 'rgba(255,214,56,0.7)' },
+  { key: 'rejete', label: 'Rejetées', couleur: 'rgba(255,100,80,0.7)' },
+]
 
 // CSS injection pour les animations
 const KEYFRAMES_ID = 'sidepanel-arrow-keyframes'
@@ -65,7 +109,12 @@ export default function SidePanel({
   liaisonVisibility,
   onLiaisonVisibilityChange,
   onSearchHighlight,
+  scope,
+  espaces: espacesAll,
+  globalFilters,
+  onGlobalFiltersChange,
 }: SidePanelProps) {
+  const isGlobal = scope === 'global'
   const [width, setWidth] = useState(CLOSED_WIDTH)
   const [search, setSearch] = useState('')
   const [filterCouleur, setFilterCouleur] = useState<Couleur | null>(null)
@@ -198,6 +247,143 @@ export default function SidePanel({
             onChange={(e) => setSearch(e.target.value)}
             style={S.searchInput}
           />
+
+          {/* ══════ FILTRES GRAPHE GLOBAL ══════ */}
+          {isGlobal && globalFilters && onGlobalFiltersChange && (
+            <div style={S.globalSection}>
+              <div style={S.globalSectionTitle}>◉ Filtres Graphe Global</div>
+
+              {/* Multi-sélection espaces */}
+              {espacesAll && espacesAll.length > 0 && (
+                <div style={S.globalSubSection}>
+                  <div style={S.globalSubLabel}>Espaces</div>
+                  <div style={S.chipRow}>
+                    {espacesAll.map(e => {
+                      const isActive = globalFilters.espaces.includes(e.id)
+                      return (
+                        <button
+                          key={e.id}
+                          onClick={() => {
+                            const next = isActive
+                              ? globalFilters.espaces.filter(x => x !== e.id)
+                              : [...globalFilters.espaces, e.id]
+                            onGlobalFiltersChange({ ...globalFilters, espaces: next })
+                          }}
+                          style={{
+                            ...S.chip,
+                            background: isActive ? 'rgba(255,200,100,0.12)' : 'rgba(30,33,55,0.5)',
+                            borderColor: isActive ? (e.couleur_identite || 'rgba(255,200,100,0.4)') : 'rgba(70,75,110,0.2)',
+                            color: isActive ? 'rgba(240,230,210,0.95)' : 'rgba(160,165,190,0.5)',
+                          }}
+                        >
+                          <span style={{
+                            width: 8, height: 8, borderRadius: '50%',
+                            background: e.couleur_identite || '#667788',
+                            display: 'inline-block', flexShrink: 0,
+                          }} />
+                          {e.nom}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Inter-espaces seulement */}
+              <button
+                onClick={() => onGlobalFiltersChange({ ...globalFilters, interSeulement: !globalFilters.interSeulement })}
+                style={{
+                  ...S.globalToggle,
+                  background: globalFilters.interSeulement ? 'rgba(255,200,100,0.12)' : 'rgba(30,33,55,0.4)',
+                  color: globalFilters.interSeulement ? 'rgba(255,210,120,1)' : 'rgba(160,165,190,0.5)',
+                  borderColor: globalFilters.interSeulement ? 'rgba(255,200,100,0.35)' : 'rgba(70,75,110,0.15)',
+                }}
+              >
+                Inter-espaces seulement
+              </button>
+
+              {/* Types de liaison */}
+              <div style={S.globalSubSection}>
+                <div style={S.globalSubLabel}>Types de liaison</div>
+                <div style={S.chipRow}>
+                  {Object.entries(TYPE_LIAISON_LABELS).map(([key, { label, couleur }]) => {
+                    const isActive = globalFilters.typesLiaison.includes(key)
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => {
+                          const next = isActive
+                            ? globalFilters.typesLiaison.filter(x => x !== key)
+                            : [...globalFilters.typesLiaison, key]
+                          onGlobalFiltersChange({ ...globalFilters, typesLiaison: next })
+                        }}
+                        style={{
+                          ...S.chip,
+                          background: isActive ? 'rgba(255,255,255,0.06)' : 'rgba(30,33,55,0.4)',
+                          borderColor: isActive ? couleur : 'rgba(70,75,110,0.15)',
+                          color: isActive ? couleur : 'rgba(160,165,190,0.4)',
+                        }}
+                      >
+                        {label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Poids minimum (slider) */}
+              <div style={S.globalSubSection}>
+                <div style={S.globalSubLabel}>Poids minimum : {globalFilters.poidsMin.toFixed(1)}</div>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.1}
+                  value={globalFilters.poidsMin}
+                  onChange={(e) => onGlobalFiltersChange({ ...globalFilters, poidsMin: parseFloat(e.target.value) })}
+                  style={S.slider}
+                />
+              </div>
+
+              {/* Validation */}
+              <div style={S.globalSubSection}>
+                <div style={S.globalSubLabel}>Validation</div>
+                <div style={S.chipRow}>
+                  {VALIDATION_OPTIONS.map(v => {
+                    const isActive = globalFilters.validation === v.key
+                    return (
+                      <button
+                        key={v.key}
+                        onClick={() => onGlobalFiltersChange({
+                          ...globalFilters,
+                          validation: isActive ? null : v.key,
+                        })}
+                        style={{
+                          ...S.chip,
+                          background: isActive ? 'rgba(255,255,255,0.06)' : 'rgba(30,33,55,0.4)',
+                          borderColor: isActive ? v.couleur : 'rgba(70,75,110,0.15)',
+                          color: isActive ? v.couleur : 'rgba(160,165,190,0.4)',
+                        }}
+                      >
+                        {v.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Reset global */}
+              {(globalFilters.espaces.length > 0 || globalFilters.typesLiaison.length > 0 ||
+                globalFilters.interSeulement || globalFilters.poidsMin > 0 || globalFilters.validation) && (
+                <button
+                  onClick={() => onGlobalFiltersChange({ ...DEFAULT_GLOBAL_FILTERS })}
+                  style={S.resetBtn}
+                >
+                  Réinitialiser les filtres globaux
+                </button>
+              )}
+            </div>
+          )}
 
           {/* FILTRES COULEUR */}
           <div style={S.section}>
@@ -493,6 +679,48 @@ const S: Record<string, React.CSSProperties> = {
     padding: '7px 12px', borderRadius: 6,
     border: '1px solid', cursor: 'pointer',
     transition: 'all 0.2s', background: 'transparent',
+  },
+
+  // -- Filtres graphe global --
+  globalSection: {
+    display: 'flex', flexDirection: 'column' as const, gap: 8,
+    padding: '10px 8px', margin: '4px -8px',
+    background: 'rgba(255, 200, 100, 0.03)',
+    borderRadius: 8,
+    border: '1px solid rgba(255, 200, 100, 0.12)',
+  },
+  globalSectionTitle: {
+    fontSize: 12, fontWeight: 600, letterSpacing: '0.6px',
+    color: 'rgba(255, 210, 120, 0.7)',
+  },
+  globalSubSection: {
+    display: 'flex', flexDirection: 'column' as const, gap: 4,
+  },
+  globalSubLabel: {
+    fontSize: 9, fontWeight: 600, textTransform: 'uppercase' as const,
+    letterSpacing: '1px', color: 'rgba(180, 190, 220, 0.4)',
+  },
+  chipRow: {
+    display: 'flex', flexWrap: 'wrap' as const, gap: 4,
+  },
+  chip: {
+    display: 'flex', alignItems: 'center', gap: 5,
+    padding: '3px 8px', borderRadius: 12,
+    border: '1px solid', cursor: 'pointer',
+    fontSize: 10, fontWeight: 500,
+    transition: 'all 0.15s', background: 'transparent',
+    lineHeight: '16px',
+  },
+  globalToggle: {
+    border: '1px solid', borderRadius: 6,
+    padding: '6px 10px', fontSize: 11, fontWeight: 500,
+    cursor: 'pointer', transition: 'all 0.2s',
+    textAlign: 'center' as const, width: '100%',
+    boxSizing: 'border-box' as const, background: 'transparent',
+  },
+  slider: {
+    width: '100%', accentColor: 'rgba(255, 200, 100, 0.7)',
+    height: 4, cursor: 'pointer',
   },
 
   // -- Liste des blocs --

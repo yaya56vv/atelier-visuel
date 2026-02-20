@@ -8,6 +8,7 @@ export interface Espace {
   id: string
   nom: string
   theme: string
+  couleur_identite?: string  // V2 : couleur d'identité graphe global
 }
 
 export function useEspaceStore() {
@@ -19,7 +20,7 @@ export function useEspaceStore() {
   useEffect(() => {
     api.listEspaces()
       .then(data => {
-        setEspaces(data.map(e => ({ id: e.id, nom: e.nom, theme: e.theme })))
+        setEspaces(data.map(e => ({ id: e.id, nom: e.nom, theme: e.theme, couleur_identite: e.couleur_identite })))
         if (data.length > 0 && !espaceActifId) {
           setEspaceActifId(data[0].id)
         }
@@ -30,7 +31,7 @@ export function useEspaceStore() {
 
   const createEspace = useCallback(async (nom: string, theme = 'defaut') => {
     const created = await api.createEspace(nom, theme)
-    const espace = { id: created.id, nom: created.nom, theme: created.theme }
+    const espace = { id: created.id, nom: created.nom, theme: created.theme, couleur_identite: created.couleur_identite }
     setEspaces(prev => [espace, ...prev])
     setEspaceActifId(created.id)
     return espace
